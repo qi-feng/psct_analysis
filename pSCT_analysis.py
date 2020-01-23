@@ -562,6 +562,83 @@ def ped_block_distr(ampl_ped5k, blocks5k, sample=-1, show=False, out_prefix="ped
 
     return ped_cube, ped_var_cube
 
+# some diagnositcs with no re-usability:
+def block_stability(ampl_ped5k, blocks5k):
+    # stability across blocks
+    ped_mean = np.zeros(512)
+    ped_median = np.zeros(512)
+    ped_std = np.zeros(512)
+    cblock_ = 0
+
+    for subp_ in range(512 / 16):
+
+        fig, axes = plt.subplots(4, 4, figsize=(20, 16))
+        for i, ax in enumerate(axes.flatten()):
+            cs_ped = get_charge_distr_channel(ampl_ped5k, 1, 1, 5, 0, show=True, out_prefix=None,  # "pedestal328534",
+                                              blocks=blocks5k, choose_block=cblock_, ax=ax, xlim=[300, 700])
+            ped_mean[cblock_] = np.mean(cs_ped)
+            ped_median[cblock_] = np.median(cs_ped)
+            ped_std[cblock_] = np.std(cs_ped)
+
+            cblock_ += 1
+        plt.tight_layout()
+        plt.savefig(OUTDIR + "pedestal328534_5k_mod2_asic1_ch5_sample0_allblocks_page{}.png".format(subp_ + 1))
+        # break
+
+    fig, ax = plt.subplots(1, 1)
+
+    ax.errorbar(range(512), ped_mean, ped_std, fmt='.')
+    plt.xlabel("Block")
+    plt.ylabel("ADC mean")
+    plt.tight_layout()
+    plt.savefig(OUTDIR + "pedestal328534_5k_mod2_asic1_ch5_block_stability_allsamples_mean.pdf")
+
+    fig, ax = plt.subplots(1, 1)
+
+    ax.errorbar(range(512), ped_median, ped_std, fmt='.')
+    plt.xlabel("Block")
+    plt.ylabel("ADC median")
+    plt.tight_layout()
+    plt.savefig(OUTDIR + "pedestal328534_5k_mod2_asic1_ch5_block_stability_allsamples_median.pdf")
+
+
+def sample_stability(ampl_ped5k):
+    # stability across samples; slow
+    pedsam_mean = np.zeros(nSamples)
+    pedsam_median = np.zeros(nSamples)
+    pedsam_std = np.zeros(nSamples)
+    sam = 0
+    for subp_ in range(128 / 16):
+
+        fig, axes = plt.subplots(4, 4, figsize=(20, 16))
+        for i, ax in enumerate(axes.flatten()):
+            cs_ped = get_charge_distr_channel(ampl_ped5k, 1, 1, 5, sam, show=True, out_prefix=None,
+                                              # "pedestal328534",
+                                              ax=ax, xlim=[300, 700])
+            pedsam_mean[sam] = np.mean(cs_ped)
+            pedsam_median[sam] = np.median(cs_ped)
+            pedsam_std[sam] = np.std(cs_ped)
+            sam += 1
+        plt.tight_layout()
+        plt.savefig(OUTDIR + "pedestal328534_5k_mod2_asic1_ch5_allblocks_each_sample_page{}.png".format(subp_ + 1))
+        # break
+
+    fig, ax = plt.subplots(1, 1)
+
+    ax.errorbar(range(nSamples), pedsam_mean, pedsam_std, fmt='.')
+    plt.xlabel("Sample")
+    plt.ylabel("ADC mean")
+    plt.tight_layout()
+    plt.save(OUTDIR + "pedestal328534_5k_mod2_asic1_ch5_allblocks_allsamples_mean.pdf")
+
+    fig, ax = plt.subplots(1, 1)
+
+    ax.errorbar(range(nSamples), pedsam_median, pedsam_std, fmt='.')
+    plt.xlabel("Sample")
+    plt.ylabel("ADC median")
+    plt.tight_layout()
+    plt.save(OUTDIR + "pedestal328534_5k_mod2_asic1_ch5_allblocks_allsamples_median.pdf")
+
 
 if __name__ == "__main__":
     #example just to read 10 evts and plot one
@@ -572,3 +649,24 @@ if __name__ == "__main__":
     im7 = show_image(ampl_crab10[7])
     fit_gaussian2d(im7)
     plt.savefig("test_image.png")
+
+    """
+    #read 5k pedestal events: 
+    run_num_pedestal = 328534
+    reader_pedestal = get_reader(run_num_pedestal)
+    ampl_ped5k, blocks5k, phases5k = read_raw_signal(reader_pedestal, range(5000))
+    np.save("run328534_pedestal_amplitude.npy", ampl_ped5k)
+    np.save("run328534_pedestal_blocks.npy", blocks5k)
+    np.save("run328534_pedestal_phases.npy", phases5k)
+
+    #get pedestal maps for all blocks:
+    ped_cube5k, ped_var_cube5k = ped_block_distr_vectorized(ampl_ped5k, blocks5k)
+    np.save("run328534_pedestal_block_cube.npy", ped_cube5k)
+    np.save("run328534_pedestal_std_block_cube.npy", ped_var_cube5k)
+
+    #plot all traces of each pixel:
+    ped_sub_evt7 = ampl_crab10[7] - np.tile(np.expand_dims(ped_cube5k[:, :, :, 1], axis=3), nSamples)
+    plot_traces(np.expand_dims(ped_sub_evt7, axis=0), 0,
+                mods=range(nModules), asics=range(nasic), channels=range(nchannel),
+                show=True, out_prefix="ped_sub1_traces_{}_evt{}".format(run_num, 7))
+    """
