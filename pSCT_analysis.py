@@ -1,5 +1,8 @@
-import target_io
-import target_driver
+try:
+    import target_io
+    import target_driver
+except:
+    print("Cannot import target libraries")
 
 import matplotlib
 matplotlib.use('Agg')
@@ -658,6 +661,24 @@ if __name__ == "__main__":
     np.save("run328534_pedestal_amplitude.npy", ampl_ped5k)
     np.save("run328534_pedestal_blocks.npy", blocks5k)
     np.save("run328534_pedestal_phases.npy", phases5k)
+    
+    #read 1k crab events: 
+    reader_crab = get_reader(run_num)
+    ampl_crab1k, blocks_crab1k, phases_crab1k = read_raw_signal(reader_crab, range(1000))
+    np.save("run{}_crab_amplitude1k.npy".format(run_num), ampl_crab1k)
+    np.save("run{}_crab_blocks1k.npy".format(run_num), blocks_crab1k)
+    np.save("run{}_crab_phases1k.npy".format(run_num), phases_crab1k)
+
+    
+    #raw charge distr
+    # ped
+    _ = plt.hist(ampl_ped5k.flatten(), bins=np.arange(0,2500,10))
+    plt.xlabel("ADC")
+    plt.savefig(OUTDIR+"ped_raw_charge_distr_5k_run328534.pdf")
+    # crab run
+    _ = plt.hist(ampl_crab1k.flatten(), bins=np.arange(0,3500,10))
+    plt.xlabel("ADC")
+    plt.savefig(OUTDIR+"raw_charge_distr_crab_1k_run328540.pdf")
 
     #get pedestal maps for all blocks:
     ped_cube5k, ped_var_cube5k = ped_block_distr_vectorized(ampl_ped5k, blocks5k)
@@ -665,6 +686,11 @@ if __name__ == "__main__":
     np.save("run328534_pedestal_std_block_cube.npy", ped_var_cube5k)
 
     #plot all traces of each pixel:
+    #crab run evt 7
+    plot_traces(ampl_crab10, 7, mods=range(nModules), asics = range(nasic), channels=range(nchannel),
+                show=True, out_prefix="traces_{}_evt{}".format(run_num, 7))
+                
+    #pedestal; note this should be using blocks that correspond to data, not the simple block 1 as shown below
     ped_sub_evt7 = ampl_crab10[7] - np.tile(np.expand_dims(ped_cube5k[:, :, :, 1], axis=3), nSamples)
     plot_traces(np.expand_dims(ped_sub_evt7, axis=0), 0,
                 mods=range(nModules), asics=range(nasic), channels=range(nchannel),
