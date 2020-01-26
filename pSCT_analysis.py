@@ -20,6 +20,7 @@ from scipy.optimize import curve_fit
 
 import h5py
 import pickle
+import argparse
 
 
 # some global var that can be modified to a config file
@@ -154,7 +155,25 @@ def get_trace(ampl, ievt, modInd, asic, ch, show=False, ax=None, title=None):
     return ampl[ievt, modInd, asic, ch, :]
 
 
+def get_trace_window(ampl, ievt, modInd, asic, ch,
+                     frac=0.1,
+                     show=False, ax=None, title=None):
+    if show:
+        if ax is None:
+            fig, ax = plt.subplots(1, 1)
+        tr_ = ampl[ievt, modInd, asic, ch, :]
+        tr_peak = np.max(tr_)
+        sam_peak = np.where(tr_==tr_peak)
+        tr_baseline = (np.median(tr_[:15]) + np.median(tr_[-30:])) / 2.
+        tr_startADC = tr_baseline + frac*(tr_peak-tr_baseline)
+        start_sample = np.interp(tr_startADC, np.flip(rates),
+                                   np.flip(thresholds))
 
+        ax.plot()
+        ax.set_xlabel("Sample")
+        ax.set_ylabel("ADC")
+        ax.set_title(title)
+    return ampl[ievt, modInd, asic, ch, :]
 
 
 def read_raw_signal(reader, events=range(10), numBlock=4, nchannel=16,
@@ -378,10 +397,27 @@ def ped_block_distr_vectorized(ampl_ped5k, blocks5k):
 
     for block_ in range(512):
         cs = np.median(ampl_ped5k[blocks5k == block_, :, :, :, :], axis=4)
+        cs = np.median(cs, axis=0)
         ped_cube[:, :, :, block_] = np.median(cs)
         ped_var_cube[:, :, :, block_] = np.std(cs)
 
     return ped_cube, ped_var_cube
+
+
+def ped_block_sample_vectorized(ampl_ped5k, blocks5k):
+    # this is across 24 mod x 4 asic x 16 chan = 1536 channels
+    # stability across all 512 blocks for each channel
+    # pedestal cube should contain for each pixel and each block 1 value (assuming it's sample invariant)
+    ped_cube = np.zeros((nModules, nasic, nchannel, nSamples, 512))
+    ped_var_cube = np.zeros((nModules, nasic, nchannel, nSamples, 512))
+
+    for block_ in range(512):
+        cs = np.median(ampl_ped5k[blocks5k == block_, :, :, :, :], axis=0)
+        stds = np.std(ampl_ped5k[blocks5k == block_, :, :, :, :], axis=0)
+        ped_cube[:, :, :, :, block_] = cs #np.median(cs)
+        ped_var_cube[:, :, :, :, block_] = stds
+
+    return ped_cube , ped_var_cube
 
 
 #def pedestal_subtraction(ampl, blocks, ped_cube):
@@ -644,14 +680,27 @@ def sample_stability(ampl_ped5k):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='pSCT analysis')
+    parser.add_argument('run', type=int, default=328540, help="Run number")
+    parser.add_argument('evt', type=int, default=7, help="Event number")
+    args = parser.parse_args()
+
     #example just to read 10 evts and plot one
-    run_num = 328540
-    reader_crab = get_reader(run_num)
+    run_num = args.run
+    evt_num = args.evt
+
+    reader = get_reader(run_num)
     # ampl_crab5k, blocks_crab5k, phases_crab5k = read_raw_signal(reader_crab, range(5000))
-    ampl_crab10, blocks_crab10, phases_crab10 = read_raw_signal(reader_crab, range(10))
-    im7 = show_image(ampl_crab10[7])
-    fit_gaussian2d(im7)
+    ampl, blocks, phases = read_raw_signal(reader, range(evt_num, evt_num+1))
+    im = show_image(ampl[evt_num])
+    fit_gaussian2d(im)
     plt.savefig("test_image.png")
+
+    if np.median(im)<10:
+        print("this event is probably no good, exit")
+        exit()
+    plot_traces(ampl, evt_num, mods=range(nModules), asics = range(nasic), channels=range(nchannel),
+                show=True, out_prefix="traces_{}_evt{}".format(run_num, evt_num))
 
     """
     #read 5k pedestal events: 
