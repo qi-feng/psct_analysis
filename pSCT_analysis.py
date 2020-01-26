@@ -692,14 +692,14 @@ if __name__ == "__main__":
     reader = get_reader(run_num)
     # ampl_crab5k, blocks_crab5k, phases_crab5k = read_raw_signal(reader_crab, range(5000))
     ampl, blocks, phases = read_raw_signal(reader, range(evt_num, evt_num+1))
-    im = show_image(ampl[evt_num])
+    im = show_image(ampl[0])
     fit_gaussian2d(im)
     plt.savefig("test_image.png")
 
     if np.median(im)<10:
         print("this event is probably no good, exit")
         exit()
-    plot_traces(ampl, evt_num, mods=range(nModules), asics = range(nasic), channels=range(nchannel),
+    plot_traces(ampl, 0, mods=range(nModules), asics = range(nasic), channels=range(nchannel),
                 show=True, out_prefix="traces_{}_evt{}".format(run_num, evt_num))
 
     """
