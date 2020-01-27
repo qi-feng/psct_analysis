@@ -5,7 +5,7 @@ except:
     print("Cannot import target libraries")
 
 import matplotlib
-matplotlib.use('Agg')
+#matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.patches import Ellipse
@@ -17,14 +17,17 @@ import numpy as np
 import scipy.io
 import scipy as sp
 from scipy.optimize import curve_fit
+from scipy.signal import medfilt2d
 
-import h5py
+#import h5py
 import pickle
 import argparse
 
 
 # some global var that can be modified to a config file
-DATADIR='/a/data/tehanu/pSCTdata'
+#DATADIR='/a/data/tehanu/pSCTdata'
+DATADIR='/mnt/data476G/pSCT_data/'
+
 #OUTDIR='/a/data/tehanu/qifeng/pSCT/results/'
 OUTDIR='./'
 
@@ -93,8 +96,8 @@ def get_reader(run_num, numBlock=4, nchannel=16,
                nasic=4, chPerPacket=32,
                modList=[1, 2, 3, 4, 5, 6, 7, 8, 9, 100, 103, 106, 107, 108, 111, 112, 114, 115, 119, 121, 123, 124, 125,
                         126],
-               DATADIR='/a/data/tehanu/pSCTdata',
-               OUTDIR='/a/data/tehanu/qifeng/pSCT/results/',
+               DATADIR=DATADIR,
+               OUTDIR=OUTDIR,
                maxZ=1000
 
                ):
@@ -111,7 +114,7 @@ def event_reader_evtloop_first(reader, event_list=range(10)):
         for modInd in range(len(modList)):
             for asic in range(nasic):
                 for ch in range(nchannel):
-                    rawdata = reader.GetEventPacket(ievt, (((nasic * modInd + asic) * nchannel) + ch) / chPerPacket)
+                    rawdata = reader.GetEventPacket(ievt, int((((nasic * modInd + asic) * nchannel) + ch) / chPerPacket))
                     packet = target_driver.DataPacket()
                     packet.Assign(rawdata, reader.GetPacketSize())
                     header = target_driver.EventHeader()
@@ -130,7 +133,7 @@ def event_reader(reader, event_list=range(10)):
         for asic in range(nasic):
             for ch in range(nchannel):
                 for ievt in event_list:
-                    rawdata = reader.GetEventPacket(ievt, (((nasic * modInd + asic) * nchannel) + ch) / chPerPacket)
+                    rawdata = reader.GetEventPacket(ievt, int((((nasic * modInd + asic) * nchannel) + ch) / chPerPacket))
                     packet = target_driver.DataPacket()
                     packet.Assign(rawdata, reader.GetPacketSize())
                     header = target_driver.EventHeader()
@@ -156,31 +159,41 @@ def get_trace(ampl, ievt, modInd, asic, ch, show=False, ax=None, title=None):
 
 
 def get_trace_window(ampl, ievt, modInd, asic, ch,
-                     frac=0.1,
+                     frac=0.1, verbose=True,
                      show=False, ax=None, title=None):
     if show:
         if ax is None:
             fig, ax = plt.subplots(1, 1)
         tr_ = ampl[ievt, modInd, asic, ch, :]
         tr_peak = np.max(tr_)
-        sam_peak = np.where(tr_==tr_peak)
+        sam_peak = int(np.where(tr_==tr_peak)[0])
+        print(sam_peak)
+        sams = np.arange(1, 1+nSamples)
         tr_baseline = (np.median(tr_[:15]) + np.median(tr_[-30:])) / 2.
         tr_startADC = tr_baseline + frac*(tr_peak-tr_baseline)
-        start_sample = np.interp(tr_startADC, np.flip(rates),
-                                   np.flip(thresholds))
-
-        ax.plot()
-        ax.set_xlabel("Sample")
-        ax.set_ylabel("ADC")
-        ax.set_title(title)
+        start_sample = int(np.interp(tr_startADC,  tr_[sam_peak-20:sam_peak], sams[sam_peak-20:sam_peak]))
+        stop_sample = int(np.interp(tr_startADC, tr_[sam_peak:sam_peak+20][::-1],  sams[sam_peak:sam_peak+20][::-1]))
+        #print(tr_baseline, tr_startADC, tr_peak, sam_peak, start_sample, stop_sample)
+        int_samples = stop_sample - start_sample
+        mean_c = np.mean(tr_[start_sample:stop_sample+1]-tr_baseline)
+        if verbose:
+            print("Integration window {}, mean charge {:.1f} ADC (subtract baseline {:.1f} ADC)".format(int_samples, mean_c, tr_baseline))
+        if show:
+            ax.plot(sams, tr_-tr_baseline)
+            ax.axvline(start_sample, ls="--", alpha=0.5)
+            ax.axvline(stop_sample, ls="--", alpha=0.5)
+            ax.set_xlabel("Sample")
+            ax.set_ylabel("ADC [subtract basline]")
+            ax.set_title(title)
     return ampl[ievt, modInd, asic, ch, :]
 
 
+
 def read_raw_signal(reader, events=range(10), numBlock=4, nchannel=16,
-                    nasic=4, chPerPacket=32,
+                    nasic=4, chPerPacket=32, ADC_cut=None,
                     modList=[1, 2, 3, 4, 5, 6, 7, 8, 9, 100, 103, 106, 107, 108, 111, 112, 114, 115, 119, 121, 123, 124,
                              125, 126],
-                    OUTDIR='/a/data/tehanu/qifeng/pSCT/results/',
+                    OUTDIR=OUTDIR,
                     ):
     nModules = len(modList)
     nEvents = len(events)
@@ -206,7 +219,7 @@ def read_raw_signal(reader, events=range(10), numBlock=4, nchannel=16,
                 ipix=0
                 #print(np.mean(ampl[icount, :, :, :, :]))
                 if ievt not in evt_dict:
-                    icount = np.max(evt_dict.values())+1
+                    icount = np.max(list(evt_dict.values()))+1
                     evt_dict[ievt] = icount
                     blocks[icount]=blockNumber
                     phases[icount]=blockPhase
@@ -232,7 +245,7 @@ def read_raw_signal_evtloop_first(reader, events=range(10), numBlock=4, nchannel
                     nasic=4, chPerPacket=32,
                     modList=[1, 2, 3, 4, 5, 6, 7, 8, 9, 100, 103, 106, 107, 108, 111, 112, 114, 115, 119, 121, 123, 124,
                              125, 126],
-                    OUTDIR='/a/data/tehanu/qifeng/pSCT/results/',
+                    OUTDIR=OUTDIR,
                     ):
     nModules = len(modList)
     nEvents = len(events)
@@ -281,7 +294,7 @@ def read_raw_signal_evtloop_first(reader, events=range(10), numBlock=4, nchannel
 
 # diagnostic
 def plot_traces(ampl_ped5k, ievt, mods=range(nModules), asics = range(nasic), channels=range(nchannel),
-                show=False, out_prefix="traces"):
+                show=False, out_prefix="traces", interactive=False):
     # this is across 24 mod x 4 asic x 16 chan = 1536 channels
     # stability across all 512 blocks for each channel
     # pedestal cube should contain for each pixel and each block 1 value (assuming it's sample invariant)
@@ -302,7 +315,10 @@ def plot_traces(ampl_ped5k, ievt, mods=range(nModules), asics = range(nasic), ch
 
             if show:
                 plt.tight_layout()
-                plt.savefig(OUTDIR + out_prefix+"_mod{}_asic{}_page{}.png".format(modList[modInd], asic, ch, nplot))
+                if interactive:
+                    plt.show()
+                else:
+                    plt.savefig(OUTDIR + out_prefix+"_mod{}_asic{}_page{}.png".format(modList[modInd], asic, ch, nplot))
 
 
 def get_charge_distr_channel(ampl, modInd, asic, ch, sample,
@@ -424,7 +440,7 @@ def ped_block_sample_vectorized(ampl_ped5k, blocks5k):
 
 
 # UI
-def show_image(red_ampl, full=True, minZ=1, maxZ=1000, simple_baseline=True):
+def show_image(red_ampl, show=True, minZ=1, maxZ=1000, simple_baseline=True, outfile=None):
     if simple_baseline:
         baseline = np.mean(red_ampl[:, :, :, 1:15], axis=3)
     else:
@@ -450,11 +466,14 @@ def show_image(red_ampl, full=True, minZ=1, maxZ=1000, simple_baseline=True):
         ImArr[(5 - posGrid[modPos[modList[modInd]]][0]) * 8:(6 - posGrid[modPos[modList[modInd]]][0]) * 8,
         (5 - posGrid[modPos[modList[modInd]]][1]) * 8:(6 - posGrid[modPos[modList[modInd]]][1]) * 8] = np.fliplr(
             physHeatArr[modInd, :, :])
-    plt.figure()
-    ax = plt.subplot(111)
-    cx = plt.pcolor(ImArr, vmin=minZ, vmax=maxZ)
-    plt.colorbar()
-    ax.set_aspect('equal')
+    if show:
+        plt.figure()
+        ax = plt.subplot(111)
+        cx = plt.pcolor(ImArr, vmin=minZ, vmax=maxZ)
+        plt.colorbar()
+        ax.set_aspect('equal')
+    if outfile is not None:
+        plt.savefig(outfile)
     return ImArr
 
 
@@ -679,19 +698,55 @@ def sample_stability(ampl_ped5k):
     plt.save(OUTDIR + "pedestal328534_5k_mod2_asic1_ch5_allblocks_allsamples_median.pdf")
 
 
+def find_bright_events(ampl_crab1k):
+    from scipy.signal import medfilt2d
+
+    for i in range(evt_, evt_ + 1000):
+        #test_slice = ampl_crab1k[i, :, :, :, 40:80]
+        # if np.percentile(test_slice[(test_slice<3800) & (test_slice>500)], 99) < 1500:
+        #    continue
+        # print(i, np.percentile(test_slice[(test_slice<3800) & (test_slice>500)], 99),
+        #      np.median(test_slice[(test_slice<3800) & (test_slice>500)]),
+        #     )#np.max(test_slice[(test_slice<3800) & (test_slice>500)]))
+
+        im7 = show_image(ampl_crab1k[i], maxZ=4000, show=False)
+        im7_smooth = medfilt2d(im7, 3)
+        if np.max(im7_smooth) < 1400:
+            continue
+        print(i, np.percentile(im7_smooth, 99),
+              np.median(im7_smooth), np.max(im7_smooth))
+        plt.figure()
+        ax = plt.subplot(111)
+        cx = plt.pcolor(im7_smooth, vmin=1, vmax=4000)
+        fit_gaussian2d(im7_smooth)
+        plt.colorbar()
+        ax.set_aspect('equal')
+        show_image(ampl_crab1k[i], maxZ=4000, show=True,
+                   outfile=OUTDIR + "image_run328540_evt{}.pdf".format(i))
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='pSCT analysis')
     parser.add_argument('run', type=int, default=328540, help="Run number")
-    parser.add_argument('evt', type=int, default=7, help="Event number")
+    parser.add_argument('evt', type=int, default=7, help="Start event number")
+    parser.add_argument('-n', '--num_evt', type=int, default=1, help="Number of events to read.Default is 1.")
     args = parser.parse_args()
 
     #example just to read 10 evts and plot one
     run_num = args.run
     evt_num = args.evt
+    n_evts = int(args.num_evt)
+    print("Reding {} events starting from evt {} in run {}".format(n_evts, evt_num, run_num))
 
     reader = get_reader(run_num)
     # ampl_crab5k, blocks_crab5k, phases_crab5k = read_raw_signal(reader_crab, range(5000))
-    ampl, blocks, phases = read_raw_signal(reader, range(evt_num, evt_num+1))
+
+    ampl, blocks, phases = read_raw_signal(reader, range(evt_num, evt_num+n_evts))
+    np.save("run{}_evt{}to{}_amplitude.npy".format(run_num, evt_num, evt_num+n_evts), ampl)
+    np.save("run{}_evt{}to{}_blocks.npy".format(run_num, evt_num, evt_num+n_evts), blocks)
+    np.save("run{}_evt{}to{}_phases.npy".format(run_num, evt_num, evt_num+n_evts), phases)
+    #sys.exit(1)
+
     im = show_image(ampl[0])
     fit_gaussian2d(im)
     plt.savefig("test_image.png")
