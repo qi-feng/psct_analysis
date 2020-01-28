@@ -15,7 +15,8 @@ if __name__ == "__main__":
     parser.add_argument('-s', '--save', action="store_true", help="Flag to save plots.")
     parser.add_argument('--smooth', action="store_true", help="Show/save the smoothed image (using a 3x3 median kernel).")
     parser.add_argument('--outfile', default=None, help="Text file to save parameters to. ")
-    parser.add_argument('--outdir', default=None, help="Default to curret dir ")
+    parser.add_argument('--outdir', default=None, help="Default to current dir ")
+    parser.add_argument('--datadir', default=None, help="Default to dir {}".format(DATADIR))
 
     args = parser.parse_args()
 
@@ -24,10 +25,13 @@ if __name__ == "__main__":
     evt_start = args.start_evt
     n_evts = int(args.num_evt)
     show = args.interactive
+
+    if args.datadir is not None:
+        DATADIR = args.datadir
     if not args.interactive and not args.save:
         print("You didn't specify either interactive or save. Assume interactive. ")
         show=True
-    reader = get_reader(run_num)
+    reader = get_reader(run_num, DATADIR=DATADIR)
     if n_evts == -1:
         n_evts = reader.GetNEvents()
 

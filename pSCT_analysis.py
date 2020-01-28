@@ -560,13 +560,6 @@ def fit_gaussian2d(data, outfile=None):  # , amp=1, xc=0,yc=0,A=1,B=1,theta=0, o
         width_x, width_y = width_y, width_x
         theta = theta + 90
 
-    plt.text(0.95, 0.05, """
-        x : %.1f
-        y : %.1f
-        $\sigma_x$ : %.1f
-        $\sigma_y$ : %.1f""" % (x, y, width_x, width_y),
-             fontsize=16, horizontalalignment='right',
-             verticalalignment='bottom', transform=ax.transAxes, color='y')
     # plt.plot([x,x], [y,y+width_y], ls='-', color='c')
     # plt.plot([x,x+width_x], [y,y], ls='-', color='c')
     e = Ellipse(xy=np.array([y, x]), width=width_y * 2,
@@ -595,6 +588,13 @@ def fit_gaussian2d(data, outfile=None):  # , amp=1, xc=0,yc=0,A=1,B=1,theta=0, o
     alpha = np.abs((alpha + 180) % 360 - 180)
     if alpha > 90 and alpha < 180:
         alpha = 180 - alpha
+
+    plt.text(0.95, 0.05, """
+            alpha : %.1f
+            $\sigma_x$ : %.1f
+            $\sigma_y$ : %.1f""" % (alpha, width_x, width_y),
+             fontsize=14, horizontalalignment='right', alpha=0.8,
+             verticalalignment='bottom', transform=ax.transAxes, color='y')
 
     # print(alpha)
     # if alpha>180:
