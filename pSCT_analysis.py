@@ -190,7 +190,7 @@ def get_trace_window(ampl, ievt, modInd, asic, ch,
 
 
 def read_raw_signal(reader, events=range(10), numBlock=4, nchannel=16,
-                    nasic=4, chPerPacket=32, ADC_cut=None,
+                    nasic=4, chPerPacket=32, ADC_cut=None, get_timestamp=False,
                     modList=[1, 2, 3, 4, 5, 6, 7, 8, 9, 100, 103, 106, 107, 108, 111, 112, 114, 115, 119, 121, 123, 124,
                              125, 126],
                     OUTDIR=OUTDIR,
@@ -201,6 +201,8 @@ def read_raw_signal(reader, events=range(10), numBlock=4, nchannel=16,
     ampl = np.zeros([nEvents, nModules, nasic, nchannel, nSamples])
     blocks = np.zeros(nEvents)
     phases = np.zeros(nEvents)
+    if get_timestamp:
+        timestamps = np.zeros(nEvents)
     data_ = event_reader(reader, events)
     icount = 0
     evt_dict={} #key is actual evt number, value is array index; this is needed because each event is revisted for diff mod asics etc
@@ -234,10 +236,14 @@ def read_raw_signal(reader, events=range(10), numBlock=4, nchannel=16,
             #print("Filling {}".format(icount))
             #print(icount, ievt, modInd, asic, ch, sample, blockNumber, blockPhase)
             ampl[icount, modInd, asic, ch, sample] = wf_
+            if get_timestamp:
+                timestamps[icount] = timestamp
 
         #else:
         #    ampl[ievt, modInd, asic, ch, sample] = wf_
     print("{} events read".format(nEvents))
+    if get_timestamp:
+        return timestamps, ampl, blocks, phases
     return ampl, blocks, phases
 
 
@@ -548,7 +554,11 @@ def fit_gaussian2d(data, outfile=None):  # , amp=1, xc=0,yc=0,A=1,B=1,theta=0, o
     ax = plt.gca()
     (height, x, y, width_x, width_y, theta) = params
     # print(height, x, y, width_x, width_y, np.rad2deg(theta))
-    print(height, x, y, width_x, width_y, theta)
+    width_x = np.abs(width_x)
+    width_y = np.abs(width_y)
+    if width_x > width_y:
+        width_x, width_y = width_y, width_x
+        theta = theta + 90
 
     plt.text(0.95, 0.05, """
         x : %.1f
@@ -568,9 +578,39 @@ def fit_gaussian2d(data, outfile=None):  # , amp=1, xc=0,yc=0,A=1,B=1,theta=0, o
     ax.add_artist(e2)
     e2.set_color('c')
 
+    plt.plot([20, y], [20, x], ls='--', alpha=0.6)
+
+    dist = np.sqrt((20 - y) ** 2 + (20 - x) ** 2)
+    # if theta<-180 or theta> 360:
+    # print(theta)
+    theta = (theta + 180) % 360 - 180
+    # print(theta)
+
+    plt.plot([y - 10 * np.cos(np.deg2rad(theta)), y + 10 * np.cos(np.deg2rad(theta))],
+             [x - 10 * np.sin(np.deg2rad(theta)), x + 10 * np.sin(np.deg2rad(theta))], ls='--', alpha=0.6)
+
+    # print(theta)
+    # print(np.rad2deg(np.arctan2((y-20.), (x-20))))
+    alpha = np.abs(np.rad2deg(np.arctan2((y - 20.), (x - 20))) - theta)
+    alpha = np.abs((alpha + 180) % 360 - 180)
+    if alpha > 90 and alpha < 180:
+        alpha = 180 - alpha
+
+    # print(alpha)
+    # if alpha>180:
+    #    alpha=alpha-180
+    # elif alpha>90:
+    #    alpha = 180-alpha
+    print(
+        "peak {}, cenX {:.2f}, cenY {:.2f}, width {:.2f}, length {:.2f}, theta {:.2f}, dist {:.2f}, alpha {:.2f}".format(
+            height, x, y, width_x, width_y, theta, dist, alpha))
+    plt.xlim(0, 40)
+    plt.ylim(0, 40)
     plt.tight_layout()
     if outfile is not None:
         plt.savefig(outfile)
+
+    return height, x, y, width_x, width_y, theta, dist, alpha
 
 
 # application
@@ -700,7 +740,15 @@ def sample_stability(ampl_ped5k):
 
 def find_bright_events(ampl_crab1k):
     from scipy.signal import medfilt2d
-
+    evts = []
+    pulseheights = []
+    xs = []
+    ys = []
+    widths = []
+    lengths = []
+    thetas = []
+    dists = []
+    alphas = []
     for i in range(evt_, evt_ + 1000):
         #test_slice = ampl_crab1k[i, :, :, :, 40:80]
         # if np.percentile(test_slice[(test_slice<3800) & (test_slice>500)], 99) < 1500:
@@ -718,11 +766,21 @@ def find_bright_events(ampl_crab1k):
         plt.figure()
         ax = plt.subplot(111)
         cx = plt.pcolor(im7_smooth, vmin=1, vmax=4000)
-        fit_gaussian2d(im7_smooth)
+        pulseheight, x, y, width, length, theta, dist, alpha = fit_gaussian2d(im7_smooth)
+        evts.append(i)
+        pulseheights.append(pulseheight)
+        xs.append(x)
+        ys.append(y)
+        widths.append(width)
+        lengths.append(length)
+        thetas.append(theta)
+        dists.append(dist)
+        alphas.append(alpha)
         plt.colorbar()
         ax.set_aspect('equal')
         show_image(ampl_crab1k[i], maxZ=4000, show=True,
                    outfile=OUTDIR + "image_run328540_evt{}.pdf".format(i))
+    return evts, pulseheights, xs, ys, widths, lengths, thetas, dists, alphas
 
 
 if __name__ == "__main__":
@@ -748,7 +806,7 @@ if __name__ == "__main__":
     #sys.exit(1)
 
     im = show_image(ampl[0])
-    fit_gaussian2d(im)
+    _ = fit_gaussian2d(im)
     plt.savefig("test_image.png")
 
     if np.median(im)<10:
