@@ -72,7 +72,7 @@ def plot_50trigger_hitmaps(ths):
     for i in range(25):
         thismod = list_pi7[i]
         ax = axes[np.where(FEE_map == thismod)[0][0], np.where(FEE_map == thismod)[1][0]]
-        cx = ax.imshow(hitarr_dict[thismod], vmin=0, vmax=50)
+        cx = ax.imshow(hitarr_dict[thismod], vmin=0, vmax=50, interpolation=None)
         plt.colorbar(cx, ax=ax, fraction=0.046, pad=0.04)
         ax.set_title("Mod {}".format(thismod))
         ax.axis('off')
