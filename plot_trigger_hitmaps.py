@@ -8,9 +8,10 @@ import numpy as np
 
 
 DATADIR='/data/local_outputDir/'
+DATADIR='../diagnositcs/trigger_hitmaps/'
 
 def get_mod_trigger_pattern_array(h):
-    h = ( bin(int(h, 16))[2:] ).zfill(h_size)
+    h = ( bin(int(h, 16))[2:] ).zfill(4)
     subarr = np.zeros((4,4))
 
     for i, trigger_ in enumerate(h):
@@ -74,6 +75,7 @@ def plot_50trigger_hitmaps(ths):
         cx = ax.imshow(hitarr_dict[thismod], vmin=0, vmax=50)
         plt.colorbar(cx, ax=ax, fraction=0.046, pad=0.04)
         ax.set_title("Mod {}".format(thismod))
+        ax.axis('off')
     # break
 
     plt.tight_layout()
@@ -83,6 +85,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='plot trigger hitmap')
     parser.add_argument('run', type=int, default=328540, help="Run number")
     parser.add_argument('-t', '--thresh', type=int, default=120, help="Thresh to plot")
+    parser.add_argument('-s', '--save', action="store_true", help="Flag to save plots.")
     args = parser.parse_args()
 
     #example just to read 10 evts and plot one
@@ -90,4 +93,6 @@ if __name__ == "__main__":
 
     df = pd.read_csv(DATADIR+"{}_hitmaps.txt".format(run_num), sep=r"\s+", header=None)
     plot_50trigger_hitmaps(df[df[0] == args.thresh])
+    if args.save:
+        plt.savefig("trigger_hitmap_run{}_thresh{}.png".format(run_num, args.thresh))
     plt.show()
