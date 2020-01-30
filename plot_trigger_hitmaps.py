@@ -88,6 +88,6 @@ if __name__ == "__main__":
     #example just to read 10 evts and plot one
     run_num = args.run
 
-    df = pd.read_csv(DATADIR+"_hitmaps.txt".format(run_num), sep=r"\s+", header=None)
+    df = pd.read_csv(DATADIR+"{}_hitmaps.txt".format(run_num), sep=r"\s+", header=None)
     plot_50trigger_hitmaps(df[df[0] == args.thresh])
     plt.show()
