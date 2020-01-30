@@ -8,7 +8,7 @@ import numpy as np
 
 
 DATADIR='/data/local_outputDir/'
-DATADIR='../diagnositcs/trigger_hitmaps/'
+#DATADIR='../diagnositcs/trigger_hitmaps/'
 
 def get_mod_trigger_pattern_array(h):
     h = ( bin(int(h, 16))[2:] ).zfill(4)
