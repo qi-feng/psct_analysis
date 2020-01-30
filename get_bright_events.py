@@ -13,6 +13,7 @@ if __name__ == "__main__":
     parser.add_argument('--peak_ADC_lower', type=int, default=1400, help="Cut on peak ADC lower; anything with peak below this value is thrown away")
     parser.add_argument('-i', '--interactive', action="store_true", help="Flag to show interactive plots.")
     parser.add_argument('-s', '--save', action="store_true", help="Flag to save plots.")
+    parser.add_argument('-f', '--flasher', action="store_true", help="Flag to search for flasher events.")
     parser.add_argument('--smooth', action="store_true", help="Show/save the smoothed image (using a 3x3 median kernel).")
     parser.add_argument('--outfile', default=None, help="Text file to save parameters to. ")
     parser.add_argument('--outdir', default=None, help="Default to current dir ")
@@ -72,6 +73,13 @@ if __name__ == "__main__":
         for i in range(current_evt, stop_evt):
             im = show_image(ampl[i-current_evt], maxZ=4000, show=False)
             im_smooth = medfilt2d(im, 3)
+            if np.percentile(im_smooth[im_smooth != 0], 90) > 500:
+                print("This is probably a flasher event")
+                isf = 'f'
+            else:
+                isf = ''
+            if args.flasher and isf == '':
+                continue
             if np.max(im_smooth) < args.peak_ADC_lower:
                 continue
             #plt.figure()
