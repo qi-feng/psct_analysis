@@ -100,9 +100,27 @@ if __name__ == "__main__":
             #cx = plt.pcolor(im_smooth, vmin=1, vmax=4000)
             if args.save:
                 if args.smooth:
-                    pulseheight, x, y, width, length, theta, dist, alpha = fit_gaussian2d(im_smooth, outfile=OUTDIR +"/smoothed_image_run{}_evt{}.png".format(run_num, i))
+                    if args.flasher:
+                        fig, ax = plt.subplots(subplot_kw={'aspect': 'equal'})
+                        plt.pcolor(im_smooth, cmap=plt.cm.gray)
+                        plt.xlim(0, 40)
+                        plt.ylim(0, 40)
+                        plt.tight_layout()
+                        if outfile is not None:
+                            plt.savefig(OUTDIR +"/smooth_image_run{}_evt{}.png".format(run_num, i))
+                    else:
+                        pulseheight, x, y, width, length, theta, dist, alpha = fit_gaussian2d(im_smooth, outfile=OUTDIR +"/smooth_image_fit_run{}_evt{}.png".format(run_num, i))
                 else:
-                    pulseheight, x, y, width, length, theta, dist, alpha = fit_gaussian2d(im, outfile=OUTDIR +"/image_run{}_evt{}.png".format(run_num, i))
+                    if args.flasher:
+                        fig, ax = plt.subplots(subplot_kw={'aspect': 'equal'})
+                        plt.pcolor(im, cmap=plt.cm.gray)
+                        plt.xlim(0, 40)
+                        plt.ylim(0, 40)
+                        plt.tight_layout()
+                        if outfile is not None:
+                            plt.savefig(OUTDIR +"/image_run{}_evt{}.png".format(run_num, i))
+                    else:
+                        pulseheight, x, y, width, length, theta, dist, alpha = fit_gaussian2d(im, outfile=OUTDIR +"/image_fit_run{}_evt{}.png".format(run_num, i))
                 if show:
                     plt.colorbar()
                     plt.show()
@@ -111,9 +129,23 @@ if __name__ == "__main__":
                 np.save(OUTDIR +"/im_run{}_evt{}_block{}_phase{}.npy".format(run_num, i, blocks[i - current_evt], phases[i - current_evt]), im)
             else:
                 if args.smooth:
-                    pulseheight, x, y, width, length, theta, dist, alpha = fit_gaussian2d(im_smooth)
+                    if args.flasher:
+                        fig, ax = plt.subplots(subplot_kw={'aspect': 'equal'})
+                        plt.pcolor(im_smooth, cmap=plt.cm.gray)
+                        plt.xlim(0, 40)
+                        plt.ylim(0, 40)
+                        plt.tight_layout()
+                    else:
+                        pulseheight, x, y, width, length, theta, dist, alpha = fit_gaussian2d(im_smooth)
                 else:
-                    pulseheight, x, y, width, length, theta, dist, alpha = fit_gaussian2d(im)
+                    if args.flasher:
+                        fig, ax = plt.subplots(subplot_kw={'aspect': 'equal'})
+                        plt.pcolor(im, cmap=plt.cm.gray)
+                        plt.xlim(0, 40)
+                        plt.ylim(0, 40)
+                        plt.tight_layout()
+                    else:
+                        pulseheight, x, y, width, length, theta, dist, alpha = fit_gaussian2d(im)
                 plt.colorbar()
                 plt.show()
             #show_image(ampl_crab1k[i], maxZ=4000, show=False, outfile=None)
@@ -129,7 +161,7 @@ if __name__ == "__main__":
             dists.append(dist)
             alphas.append(alpha)
             """
-            if args.outfile is not None:
+            if args.outfile is not None and not args.flasher:
                 with open(ofile, 'a') as paramfileio:
                     paramfileio.write("{} {} {} {:.2f} {:.2f} {:.2f} {:.2f} {:.2f} {:.2f} {:.2f}\n".format(
                         i, timestamps[i-current_evt], pulseheight, x, y, width, length, theta, dist, alpha))
