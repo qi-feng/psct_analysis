@@ -106,8 +106,7 @@ if __name__ == "__main__":
                         plt.xlim(0, 40)
                         plt.ylim(0, 40)
                         plt.tight_layout()
-                        if outfile is not None:
-                            plt.savefig(OUTDIR +"/smooth_image_run{}_evt{}.png".format(run_num, i))
+                        plt.savefig(OUTDIR +"/smooth_image_run{}_evt{}.png".format(run_num, i))
                     else:
                         pulseheight, x, y, width, length, theta, dist, alpha = fit_gaussian2d(im_smooth, outfile=OUTDIR +"/smooth_image_fit_run{}_evt{}.png".format(run_num, i))
                 else:
@@ -117,8 +116,7 @@ if __name__ == "__main__":
                         plt.xlim(0, 40)
                         plt.ylim(0, 40)
                         plt.tight_layout()
-                        if outfile is not None:
-                            plt.savefig(OUTDIR +"/image_run{}_evt{}.png".format(run_num, i))
+                        plt.savefig(OUTDIR +"/image_run{}_evt{}.png".format(run_num, i))
                     else:
                         pulseheight, x, y, width, length, theta, dist, alpha = fit_gaussian2d(im, outfile=OUTDIR +"/image_fit_run{}_evt{}.png".format(run_num, i))
                 if show:
