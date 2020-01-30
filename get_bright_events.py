@@ -90,7 +90,10 @@ if __name__ == "__main__":
                 isf = ''
             if args.flasher and isf == '':
                 continue
-            elif np.max(im_smooth) < args.peak_ADC_lower:
+            elif not args.flasher and isf == 'f':
+                # let's skip flashers
+                continue
+            elif np.max(im_smooth) < args.peak_ADC_lower and not args.flasher:
                 continue
             #plt.figure()
             #ax = plt.subplot(111)
