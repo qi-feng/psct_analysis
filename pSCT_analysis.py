@@ -188,6 +188,165 @@ def get_trace_window(ampl, ievt, modInd, asic, ch,
     return ampl[ievt, modInd, asic, ch, :]
 
 
+def get_trace_window_block_test(ampl, ievt, modInd, asic, ch,
+                                frac=0.1, verbose=True,
+                                blocks=None, phases=None,
+                                show=False, ax=None, title=None,
+                                ylim=None):
+    if show:
+        sam_b1 = -1
+        if blocks is not None:
+            b_ = blocks[ievt]
+        if phases is not None:
+            ph_ = int(phases[ievt])
+            sam_b1 = 32 - ph_
+        else:
+            print("No phases provided, why am I called")
+            return -1, -1
+        if ax is None:
+            fig, ax = plt.subplots(1, 1)
+        tr_ = ampl[ievt, modInd, asic, ch, :]
+        tr_peak = np.max(tr_[25:90])
+        if np.sum(tr_) == 0:
+            #empty trace
+            return ampl[ievt, modInd, asic, ch, :], 0, 0, 0, 0
+        peak_ind = np.where(tr_ == tr_peak)
+        #print(peak_ind)
+
+        def find_nearest(array, value):
+            array = np.asarray(array)
+            idx = (np.abs(array - value)).argmin()
+            return array[idx]
+
+        if len(peak_ind[0])>1:
+            #print("more than 1")
+            peak_ind = find_nearest(peak_ind[0], 45)
+        else:
+            peak_ind = peak_ind[0]
+        #print(peak_ind)
+
+        sam_peak = int(peak_ind)
+        #print(sam_peak)
+        sams = np.arange(nSamples)
+
+        # first block and last block are probably safe for pedestal estimation
+        tr_baseline_b1 = np.median(tr_[:sam_b1])
+        tr_[:sam_b1] = tr_[:sam_b1] - tr_baseline_b1
+
+        tr_baseline_b5 = np.median(tr_[sam_b1 + 96:])
+        tr_[sam_b1 + 96:] = tr_[sam_b1 + 96:] - tr_baseline_b5
+
+        # tr_baseline = np.mean(tr_baseline_b1, tr_baseline_b2, tr_baseline_b3, tr_baseline_b4, tr_baseline_b5)
+        """
+        if sam_b1<15: 
+            # in this case the second block is also good for pedestal
+            tr_baseline_b2 = np.median(tr_[sam_b1:sam_b1+32]) 
+            tr_[sam_b1:sam_b1+32] = tr_[sam_b1:sam_b1+32]-tr_baseline_b2
+            tr_baseline = np.mean([tr_baseline_b1, tr_baseline_b2, tr_baseline_b5])      
+        else:
+            tr_baseline = np.mean([tr_baseline_b1, tr_baseline_b5])    
+        """
+        tr_baseline = np.mean([tr_baseline_b1, tr_baseline_b5])
+
+        tr_startADC = tr_baseline + frac * (tr_peak - tr_baseline)
+        print(tr_baseline, tr_startADC, tr_peak, sam_peak)
+
+        if (tr_peak-tr_baseline)<48:
+            start_sample=40
+            stop_sample=80
+        else:
+            start_sample = int(np.interp(tr_startADC, tr_[sam_peak - 20:sam_peak], sams[sam_peak - 20:sam_peak]))
+            stop_sample = int(np.interp(tr_startADC, tr_[sam_peak:sam_peak + 20][::-1], sams[sam_peak:sam_peak + 20][::-1]))
+        # print(tr_baseline, tr_startADC, tr_peak, sam_peak, start_sample, stop_sample)
+
+        int_samples = stop_sample - start_sample
+
+        # if sam_b1 >=15:
+        if True:
+            if (sam_b1 + 32) < start_sample or sam_b1 > stop_sample:
+                tr_baseline_b2 = np.median(tr_[sam_b1:sam_b1 + 32])
+            elif sam_b1 > start_sample and (sam_b1 + 32) < stop_sample:
+                # fully contained... use the previous block
+                tr_baseline_b2 = tr_baseline
+            elif sam_b1 > start_sample and (sam_b1 + 32) > stop_sample:
+                # tr_baseline_b2 = np.median(tr_[stop_sample:sam_b1+32])
+                tr_baseline_b2 = tr_baseline
+            elif sam_b1 < start_sample and (sam_b1 + 32) > stop_sample:
+                # both sides can be used
+                # tr_baseline_b2 = np.median([tr_[sam_b1:start_sample],tr_[stop_sample:sam_b1+32]])
+                tr_baseline_b2 = tr_baseline
+            elif sam_b1 < start_sample and (sam_b1 + 32) < stop_sample:
+                # tr_baseline_b2 = np.median(tr_[sam_b1:start_sample])
+                tr_baseline_b2 = tr_baseline
+            else:
+                print("Shouldn't reach here")
+                # tr_baseline_b2 = tr_baseline_b1
+                tr_baseline_b2 = tr_baseline
+
+        tr_[sam_b1:sam_b1 + 32] = tr_[sam_b1:sam_b1 + 32] - tr_baseline_b2
+
+        if (sam_b1 + 64) < start_sample or (sam_b1 + 32) > stop_sample:
+            tr_baseline_b3 = np.median(tr_[sam_b1 + 32:sam_b1 + 64])
+        elif (sam_b1 + 32) > start_sample and (sam_b1 + 64) < stop_sample:
+            # fully contained... use the average block
+            tr_baseline_b3 = tr_baseline
+        elif (sam_b1 + 32) > start_sample and (sam_b1 + 64) > stop_sample:
+            # tr_baseline_b3 = np.median(tr_[stop_sample:sam_b1+64])
+            tr_baseline_b3 = tr_baseline
+        elif (sam_b1 + 32) < start_sample and (sam_b1 + 64) > stop_sample:
+            # tr_baseline_b3 = np.median([tr_[sam_b1+32:start_sample],tr_[stop_sample:sam_b1+64]])
+            tr_baseline_b3 = tr_baseline
+        elif (sam_b1 + 32) < start_sample and (sam_b1 + 64) < stop_sample:
+            # tr_baseline_b3 = np.median(tr_[sam_b1+32:start_sample])
+            tr_baseline_b3 = tr_baseline
+        else:
+            print("Shouldn't reach here")
+            tr_baseline_b3 = tr_baseline
+
+        tr_[sam_b1 + 32:sam_b1 + 64] = tr_[sam_b1 + 32:sam_b1 + 64] - tr_baseline_b3
+
+        if (sam_b1 + 96) < start_sample or (sam_b1 + 64) > stop_sample:
+            tr_baseline_b4 = np.median(tr_[sam_b1 + 64:sam_b1 + 96])
+        elif (sam_b1 + 64) > start_sample and (sam_b1 + 96) < stop_sample:
+            # fully contained... use the average block
+            tr_baseline_b4 = tr_baseline
+        elif (sam_b1 + 64) > start_sample and (sam_b1 + 96) > stop_sample:
+            # tr_baseline_b4 = np.median(tr_[stop_sample:sam_b1+96])
+            tr_baseline_b4 = tr_baseline
+        elif (sam_b1 + 64) < start_sample and (sam_b1 + 96) > stop_sample:
+            # tr_baseline_b4 = np.median([tr_[sam_b1+64:start_sample],tr_[stop_sample:sam_b1+96]])
+            tr_baseline_b4 = tr_baseline
+        elif (sam_b1 + 64) < start_sample and (sam_b1 + 96) < stop_sample:
+            # tr_baseline_b4 = np.median(tr_[sam_b1+64:start_sample])
+            tr_baseline_b4 = tr_baseline
+        else:
+            print("Shouldn't reach here")
+            tr_baseline_b4 = tr_baseline
+        tr_[sam_b1 + 64:sam_b1 + 96] = tr_[sam_b1 + 64:sam_b1 + 96] - tr_baseline_b4
+
+        mean_c = np.mean(tr_[start_sample:stop_sample + 1])  # -tr_baseline)
+
+        if verbose:
+            print("Integration window {}, mean charge {:.1f} ADC (subtract baseline {:.1f} ADC)".format(int_samples,
+                                                                                                        mean_c,
+                                                                                                        tr_baseline))
+        if show:
+            # ax.plot(sams, tr_-tr_baseline)
+            ax.plot(sams, tr_)
+            ax.axvline(start_sample, ls="--", alpha=0.5)
+            ax.axvline(stop_sample, ls="--", alpha=0.5)
+            ax.set_xlabel("Sample")
+            ax.set_ylabel("ADC [subtract basline]")
+            ax.set_title(title)
+            # if phases is not None:
+            ax.axvline(sam_b1, ls="--", alpha=0.5, color='k')
+            ax.axvline(sam_b1 + 32, ls="--", alpha=0.5, color='k')
+            ax.axvline(sam_b1 + 64, ls="--", alpha=0.5, color='k')
+            ax.axvline(sam_b1 + 98, ls="--", alpha=0.5, color='k')
+            if ylim is not None:
+                ax.set_ylim(ylim)
+    return ampl[ievt, modInd, asic, ch, :], mean_c, sam_b1, start_sample, stop_sample
+
 
 def read_raw_signal(reader, events=range(10), numBlock=4, nchannel=16,
                     nasic=4, chPerPacket=32, ADC_cut=None, get_timestamp=False,
@@ -300,14 +459,19 @@ def read_raw_signal_evtloop_first(reader, events=range(10), numBlock=4, nchannel
 
 # diagnostic
 def plot_traces(ampl_ped5k, ievt, mods=range(nModules), asics = range(nasic), channels=range(nchannel),
-                show=False, out_prefix="traces", interactive=False):
+                blocks=None, phases=None,
+                ylim=None,
+                show=True, out_prefix="traces", interactive=False):
     # this is across 24 mod x 4 asic x 16 chan = 1536 channels
     # stability across all 512 blocks for each channel
     # pedestal cube should contain for each pixel and each block 1 value (assuming it's sample invariant)
-    ped_cube = np.zeros((nModules, nasic, nchannel, 512))
-    ped_var_cube = np.zeros((nModules, nasic, nchannel, 512))
-    nplot = 0
+    #ped_cube = np.zeros((nModules, nasic, nchannel, 512))
+    #ped_var_cube = np.zeros((nModules, nasic, nchannel, 512))
+
+    allmod_peaks = []
     for modInd in mods:
+        nplot = 0
+        thismod_peaks = []
         for asic in asics:
             if show:
                 fig, axes = plt.subplots(4, 4, figsize=(20, 16))
@@ -317,14 +481,48 @@ def plot_traces(ampl_ped5k, ievt, mods=range(nModules), asics = range(nasic), ch
                     ax=axes.flatten()[ch]
                 else:
                     ax=None
-                trace = get_trace(ampl_ped5k, ievt, modInd, asic, ch, show=show, ax=ax, title="ch {}".format(ch))
+                if blocks is not None and phases is not None:
+                    trace, mean_c, sam_b1, start_sample, stop_sample = get_trace_window_block_test(ampl_ped5k, ievt, modInd, asic, ch, blocks=blocks,
+                                                        title="ch {}".format(ch), ax=ax, ylim=ylim,
+                                                        phases=phases, show=show)
+                    thismod_peaks.append(mean_c)
+                else:
+                    trace = get_trace(ampl_ped5k, ievt, modInd, asic, ch, show=show, ax=ax, title="ch {}".format(ch))
 
             if show:
+                plt.title("Mod {} Asic {}".format(modList[modInd], asic))
                 plt.tight_layout()
                 if interactive:
                     plt.show()
                 else:
-                    plt.savefig(OUTDIR + out_prefix+"_mod{}_asic{}_page{}.png".format(modList[modInd], asic, ch, nplot))
+                    plt.savefig(OUTDIR + out_prefix+"_mod{}_asic{}.png".format(modList[modInd], asic, ch))
+        allmod_peaks.append(thismod_peaks)
+        if len(thismod_peaks)>0:
+            plt.figure()
+            plt.hist(thismod_peaks)
+            plt.xlabel("Mean ADC")
+            plt.title("Mod {}, {} channels".format(modList[modInd], len(thismod_peaks)))
+            plt.savefig(OUTDIR + out_prefix + "_mod{}_meanADC_hist.png".format(modList[modInd]))
+
+
+    gs = gridspec.GridSpec(5,5)
+    gs.update(wspace=0.04, hspace=0.04)
+
+    for modInd in mods:
+        loc, locReflect = calcLoc(modInd)
+        thismod_peaks = allmod_peaks[modInd]
+        plt.figure('Mean ADC Hist')
+        ax = plt.subplot(gs[loc])
+        ax.hist(thismod_peaks)
+        plt.xlabel("Mean ADC")
+        # take off axes
+        ax.axis('off')
+        ax.set_aspect('equal')
+        ax.set_title("Mod {}, {} channels".format(modList[modInd], len(thismod_peaks)))
+    plt.tight_layout()
+    plt.savefig(OUTDIR + out_prefix + "_allmods_meanADC_hist.png")
+
+
 
 
 def get_charge_distr_channel(ampl, modInd, asic, ch, sample,

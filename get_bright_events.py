@@ -85,6 +85,9 @@ if __name__ == "__main__":
                 if show:
                     plt.colorbar()
                     plt.show()
+
+                np.save(OUTDIR +"/ampl_run{}_evt{}_block{}_phase{}.npy".format(run_num, i, blocks[i - current_evt], phases[i - current_evt]), ampl[i - current_evt])
+                np.save(OUTDIR +"/im_run{}_evt{}_block{}_phase{}.npy".format(run_num, i, blocks[i - current_evt], phases[i - current_evt]), im)
             else:
                 if args.smooth:
                     pulseheight, x, y, width, length, theta, dist, alpha = fit_gaussian2d(im_smooth)
