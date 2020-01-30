@@ -14,6 +14,7 @@ if __name__ == "__main__":
     parser.add_argument('-i', '--interactive', action="store_true", help="Flag to show interactive plots.")
     parser.add_argument('-s', '--save', action="store_true", help="Flag to save plots.")
     parser.add_argument('-f', '--flasher', action="store_true", help="Flag to search for flasher events.")
+    parser.add_argument('-l', '--flasher_list', default="", help="File to save flasher event numbers.")
     parser.add_argument('--smooth', action="store_true", help="Show/save the smoothed image (using a 3x3 median kernel).")
     parser.add_argument('--outfile', default=None, help="Text file to save parameters to. ")
     parser.add_argument('--outdir', default=None, help="Default to current dir ")
@@ -60,7 +61,13 @@ if __name__ == "__main__":
         with open(ofile, 'w') as paramfileio:
             paramfileio.write(" ".join(colnames))
             paramfileio.write("\n")
-
+    if args.flasher:
+        if args.flasher_file=="":
+            flasher_file = OUTDIR +"/flasher_evt_nums_run{}.npy".format(run_num)
+        else:
+            flasher_file = OUTDIR + args.flasher_file
+        with open(flasher_file, 'w') as ffio:
+            ffio.write("evt\n")
     current_evt = evt_start
     for icycle in range(ncycles):
         if icycle == (ncycles - 1):
@@ -76,11 +83,14 @@ if __name__ == "__main__":
             if np.percentile(im_smooth[im_smooth != 0], 90) > 500:
                 print("This is probably a flasher event")
                 isf = 'f'
+                if args.flasher:
+                    with open(flasher_file, 'a') as ffio:
+                        ffio.write("{}\n".format(i))
             else:
                 isf = ''
             if args.flasher and isf == '':
                 continue
-            if np.max(im_smooth) < args.peak_ADC_lower:
+            elif np.max(im_smooth) < args.peak_ADC_lower:
                 continue
             #plt.figure()
             #ax = plt.subplot(111)

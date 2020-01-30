@@ -7,8 +7,8 @@ import numpy as np
 
 
 
-DATADIR='/data/local_outputDir/'
-#DATADIR='../diagnositcs/trigger_hitmaps/'
+#DATADIR='/data/local_outputDir/'
+DATADIR='../diagnositcs/trigger_hitmaps/'
 
 def get_mod_trigger_pattern_array(h):
     h = ( bin(int(h, 16))[2:] ).zfill(4)
@@ -86,6 +86,9 @@ if __name__ == "__main__":
     parser.add_argument('run', type=int, default=328540, help="Run number")
     parser.add_argument('-t', '--thresh', type=int, default=120, help="Thresh to plot")
     parser.add_argument('-s', '--save', action="store_true", help="Flag to save plots.")
+    parser.add_argument('--outdir', default=None, help="Default to current dir ")
+    parser.add_argument('--datadir', default=None, help="Default to dir {}".format(DATADIR))
+
     args = parser.parse_args()
 
     #example just to read 10 evts and plot one

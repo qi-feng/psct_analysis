@@ -34,13 +34,13 @@ if __name__ == "__main__":
     else:
         isf = ''
 
-    np.save(OUTDIR + "/ampl_run{}_evt{}_block{}_phase{}{}.npy".format(run_num, evt_num, blocks[0],
-                                                                    phases[0], isf), ampl[0])
-    np.save(OUTDIR + "/im_run{}_evt{}_block{}_phase{}{}.npy".format(run_num, evt_num, blocks[0],
-                                                                  phases[0], isf), im)
+    np.save(OUTDIR + "/ampl_run{}_evt{}_block{}_phase{}{}.npy".format(run_num, evt_num, int(blocks[0]),
+                                                                    int(phases[0]), isf), ampl[0])
+    np.save(OUTDIR + "/im_run{}_evt{}_block{}_phase{}{}.npy".format(run_num, evt_num, int(blocks[0]),
+                                                                  int(phases[0]), isf), im)
 
     if args.trace:
         plot_traces(ampl, 0, mods=range(nModules), asics = range(nasic), channels=range(nchannel),
                 blocks=blocks, phases=phases,
-                ylim=[-200,1500],
+                ylim=[-100,1500],
                 show=True, out_prefix="traces_{}_evt{}".format(run_num, evt_num), interactive=False)

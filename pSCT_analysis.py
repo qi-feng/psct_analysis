@@ -255,8 +255,9 @@ def get_trace_window_block_test(ampl, ievt, modInd, asic, ch,
             start_sample=40
             stop_sample=80
         else:
-            start_sample = int(np.interp(tr_startADC, tr_[sam_peak - 20:sam_peak], sams[sam_peak - 20:sam_peak]))
-            stop_sample = int(np.interp(tr_startADC, tr_[sam_peak:sam_peak + 20][::-1], sams[sam_peak:sam_peak + 20][::-1]))
+
+            start_sample = int(np.interp(tr_startADC, tr_[max(0, sam_peak - 20):sam_peak], sams[max(0, sam_peak - 20):sam_peak]))
+            stop_sample = int(np.interp(tr_startADC, tr_[sam_peak:min(sam_peak + 20, nSamples)][::-1], sams[sam_peak:min(sam_peak + 20, nSamples)][::-1]))
         # print(tr_baseline, tr_startADC, tr_peak, sam_peak, start_sample, stop_sample)
 
         int_samples = stop_sample - start_sample
@@ -516,9 +517,11 @@ def plot_traces(ampl_ped5k, ievt, mods=range(nModules), asics = range(nasic), ch
         ax = axes[loc]
         ax.hist(thismod_peaks)
         ax.set_xlabel("Mean ADC")
+        if ylim is not None:
+            ax.set_xlim(ylim)
         # take off axes
-        ax.axis('off')
-        ax.set_aspect('equal')
+        #ax.axis('off')
+        #ax.set_aspect('equal')
         ax.set_title("Mod {}, {} channels".format(modList[modInd], len(thismod_peaks)))
     axes[2, 2].axis('off')
     plt.tight_layout()
