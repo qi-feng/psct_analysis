@@ -505,20 +505,22 @@ def plot_traces(ampl_ped5k, ievt, mods=range(nModules), asics = range(nasic), ch
             plt.savefig(OUTDIR + out_prefix + "_mod{}_meanADC_hist.png".format(modList[modInd]))
 
 
-    gs = gridspec.GridSpec(5,5)
-    gs.update(wspace=0.04, hspace=0.04)
+    #gs = gridspec.GridSpec(5,5)
+    #gs.update(wspace=0.04, hspace=0.04)
+    fig, axes = plt.subplots(5, 5, figsize=(16, 16))
 
     for modInd in mods:
         loc, locReflect = calcLoc(modInd)
         thismod_peaks = allmod_peaks[modInd]
-        plt.figure('Mean ADC Hist')
-        ax = plt.subplot(gs[loc])
+        #ax = plt.subplot(gs[loc])
+        ax = axes[loc]
         ax.hist(thismod_peaks)
-        plt.xlabel("Mean ADC")
+        ax.set_xlabel("Mean ADC")
         # take off axes
         ax.axis('off')
         ax.set_aspect('equal')
         ax.set_title("Mod {}, {} channels".format(modList[modInd], len(thismod_peaks)))
+    axes[2, 2].axis('off')
     plt.tight_layout()
     plt.savefig(OUTDIR + out_prefix + "_allmods_meanADC_hist.png")
 
