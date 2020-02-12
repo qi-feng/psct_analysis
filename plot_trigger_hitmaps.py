@@ -132,6 +132,7 @@ if __name__ == "__main__":
     parser.add_argument('run', type=int, default=328540, help="Run number")
     parser.add_argument('-t', '--thresh', type=int, default=120, help="Thresh to plot")
     parser.add_argument('-s', '--save', action="store_true", help="Flag to save plots.")
+    parser.add_argument('-i', '--interactive', action="store_true", help="Flag to show interactive plots.")
     parser.add_argument('--outdir', default=None, help="Default to current dir ")
     parser.add_argument('--datadir', default=None, help="Default to dir {}".format(DATADIR))
 
@@ -141,6 +142,7 @@ if __name__ == "__main__":
         DATADIR = args.datadir
     if args.outdir is not None:
         OUTDIR = args.outdir
+    show = args.interactive
 
     #example just to read 10 evts and plot one
     run_num = args.run
@@ -149,4 +151,5 @@ if __name__ == "__main__":
     plot_50trigger_hitmaps(df[df[0] == args.thresh])
     if args.save:
         plt.savefig(OUTDIR+"trigger_hitmap_run{}_thresh{}.png".format(run_num, args.thresh))
-    plt.show()
+    if show:
+        plt.show()
