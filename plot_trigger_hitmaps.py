@@ -9,6 +9,7 @@ import numpy as np
 
 #DATADIR='/data/local_outputDir/'
 DATADIR='../diagnositcs/trigger_hitmaps/'
+OUTDIR='./'
 
 def get_mod_trigger_pattern_array(h):
     h_size = 4 * 4
@@ -136,11 +137,16 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    if args.datadir is not None:
+        DATADIR = args.datadir
+    if args.outdir is not None:
+        OUTDIR = args.outdir
+
     #example just to read 10 evts and plot one
     run_num = args.run
 
     df = pd.read_csv(DATADIR+"{}_hitmaps.txt".format(run_num), sep=r"\s+", header=None)
     plot_50trigger_hitmaps(df[df[0] == args.thresh])
     if args.save:
-        plt.savefig("trigger_hitmap_run{}_thresh{}.png".format(run_num, args.thresh))
+        plt.savefig(OUTDIR+"trigger_hitmap_run{}_thresh{}.png".format(run_num, args.thresh))
     plt.show()
