@@ -3,6 +3,7 @@ import pandas as pd
 import argparse
 import matplotlib.pyplot as plt
 import numpy as np
+import time
 
 
 
@@ -130,12 +131,14 @@ def plot_50trigger_hitmaps_single_mod(ths, modID):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='plot trigger hitmap')
     parser.add_argument('run', type=int, default=328540, help="Run number")
-    parser.add_argument('-t', '--thresh', type=int, default=120, help="Thresh to plot")
-    parser.add_argument('-s', '--save', action="store_true", help="Flag to save plots.")
+    parser.add_argument('-t', '--thresh', type=int, default=120, help="Thresh to plot. Default is 120. ")
+    parser.add_argument('-a', '--all_thresh', action="store_true", help="Plot all threshold values, can take a while. ")
+    #parser.add_argument('-s', '--save', action="store_true", help="Flag to save plots.")
     parser.add_argument('-i', '--interactive', action="store_true", help="Flag to show interactive plots.")
-    parser.add_argument('--outdir', default=None, help="Default to current dir ")
+    parser.add_argument('--outdir', default=None, help="Default to dir {}".format(OUTDIR))
     parser.add_argument('--datadir', default=None, help="Default to dir {}".format(DATADIR))
 
+    start_time = time.time()
     args = parser.parse_args()
 
     if args.datadir is not None:
@@ -148,8 +151,18 @@ if __name__ == "__main__":
     run_num = args.run
 
     df = pd.read_csv(DATADIR+"{}_hitmaps.txt".format(run_num), sep=r"\s+", header=None)
-    plot_50trigger_hitmaps(df[df[0] == args.thresh])
-    if args.save:
-        plt.savefig(OUTDIR+"trigger_hitmap_run{}_thresh{}.png".format(run_num, args.thresh))
+    if args.all_thresh:
+        for thresh in np.unique(df[0].values):
+            print("Plotting the sum of 50 trigger hit maps for thresh {}".format(thresh))
+            plot_50trigger_hitmaps(df[df[0] == thresh])
+            plt.savefig(OUTDIR+"trigger_hitmaps_50sum_run{}_thresh{}.png".format(run_num, thresh))
+    else:
+        print("Plotting the sum of 50 trigger hit maps for thresh {}".format(args.thresh))
+        plot_50trigger_hitmaps(df[df[0] == args.thresh])
+        #if args.save:
+        plt.savefig(OUTDIR+"trigger_hitmaps_50sum_run{}_thresh{}.png".format(run_num, args.thresh))
     if show:
         plt.show()
+    elapsed_time = time.time() - start_time
+    print("Done. Elapsed time: {} s".format(elapsed_time))
+
