@@ -4,6 +4,7 @@ import time
 
 DATADIR='/mnt/data476G/pSCT_data/'
 OUTDIR='./'
+norm_map_default = np.load("norm_map_default.npy")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='pSCT analysis')
@@ -14,6 +15,7 @@ if __name__ == "__main__":
     parser.add_argument('-i', '--interactive', action="store_true", help="Flag to show interactive plots.")
     parser.add_argument('-s', '--save', action="store_true", help="Flag to save plots.")
     parser.add_argument('-f', '--flasher', action="store_true", help="Flag to search for flasher events.")
+    parser.add_argument('--flatfield', action="store_true", help="Flag to try flatfielding.")
     parser.add_argument('-l', '--flasher_file', default="", help="File to save flasher event numbers.")
     parser.add_argument('--smooth', action="store_true", help="Show/save the smoothed image (using a 3x3 median kernel).")
     parser.add_argument('--outfile', default=None, help="Text file to save parameters to. ")
@@ -98,6 +100,11 @@ if __name__ == "__main__":
             #plt.figure()
             #ax = plt.subplot(111)
             #cx = plt.pcolor(im_smooth, vmin=1, vmax=4000)
+
+            if args.flatfield:
+                im = im / norm_map_default
+                im_smooth = medfilt2d(im, 3)
+
             if args.save:
                 if args.smooth:
                     if args.flasher:
@@ -105,6 +112,7 @@ if __name__ == "__main__":
                         plt.pcolor(im_smooth, cmap=plt.cm.gray)
                         plt.xlim(0, 40)
                         plt.ylim(0, 40)
+                        plt.colorbar()
                         plt.tight_layout()
                         plt.savefig(OUTDIR +"/smooth_image_run{}_evt{}.png".format(run_num, i))
                     else:
@@ -115,6 +123,7 @@ if __name__ == "__main__":
                         plt.pcolor(im, cmap=plt.cm.gray)
                         plt.xlim(0, 40)
                         plt.ylim(0, 40)
+                        plt.colorbar()
                         plt.tight_layout()
                         plt.savefig(OUTDIR +"/image_run{}_evt{}.png".format(run_num, i))
                     else:
@@ -144,7 +153,7 @@ if __name__ == "__main__":
                         plt.tight_layout()
                     else:
                         pulseheight, x, y, width, length, theta, dist, alpha = fit_gaussian2d(im)
-                plt.colorbar()
+
                 plt.show()
             #show_image(ampl_crab1k[i], maxZ=4000, show=False, outfile=None)
                        #outfile=OUTDIR + "image_run328540_evt{}.pdf".format(i))
