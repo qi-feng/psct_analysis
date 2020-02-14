@@ -34,7 +34,7 @@ if __name__ == "__main__":
         reader = get_reader_calibrated(args.calibrated, DATADIR=DATADIR) #("cal328555_100evt.r1")
         calib_string = "calibrated_pedHVoff_no_baseline_subtraction"
     else:
-        reader = get_reader(run_num)
+        reader = get_reader(run_num, DATADIR=DATADIR)
         if args.baseline:
             calib_string = "simple_baseline_subtraction"
         else:
