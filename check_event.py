@@ -13,7 +13,15 @@ if __name__ == "__main__":
     parser.add_argument('-c', '--calibrated', default=None, help="Read calibrated file instead of raw file.")
     parser.add_argument('-b', '--baseline', action="store_true", help="Subtract baselines from the first 15 samples and the last 20 samples in traces")
     #parser.add_argument('-n', '--num_evt', type=int, default=1, help="Number of events to read.Default is 1.")
+    parser.add_argument('--outdir', default=None, help="Default to current dir ")
+    parser.add_argument('--datadir', default=None, help="Default to dir {}".format(DATADIR))
     args = parser.parse_args()
+
+
+    if args.datadir is not None:
+        DATADIR = args.datadir
+    if args.outdir is not None:
+        OUTDIR = args.outdir
 
     #example just to read 10 evts and plot one
     run_num = args.run
