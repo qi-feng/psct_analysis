@@ -21,6 +21,7 @@ if __name__ == "__main__":
     parser.add_argument('--outfile', default=None, help="Text file to save parameters to. ")
     parser.add_argument('--outdir', default=None, help="Default to current dir ")
     parser.add_argument('--datadir', default=None, help="Default to dir {}".format(DATADIR))
+    parser.add_argument('-c', '--calibrated', default=None, help="Read calibrated file instead of raw file.")
 
     args = parser.parse_args()
 
@@ -35,11 +36,21 @@ if __name__ == "__main__":
     if not args.interactive and not args.save:
         print("You didn't specify either interactive or save. Assume interactive. ")
         show=True
-    reader = get_reader(run_num, DATADIR=DATADIR)
-    if n_evts == -1:
-        n_evts = reader.GetNEvents()
 
-    print("Reding {} events starting from evt {} in run {}".format(n_evts, n_evts, run_num))
+    if args.calibrated is not None:
+        reader = get_reader_calibrated(args.calibrated, DATADIR=DATADIR) #("cal328555_100evt.r1")
+        calib_string = "calibrated"
+    else:
+        reader = get_reader(run_num, DATADIR=DATADIR)
+        calib_string = ""
+
+    if n_evts == -1:
+        n_evts = reader.GetNEvents() - evt_start
+    elif evt_start + n_evts >= reader.GetNEvents():
+        n_evts = reader.GetNEvents() - evt_start
+        print("n_evts provided is too large, changing to {}".format(n_evts))
+
+    print("Reding {} events starting from evt {} in run {}".format(n_evts, evt_start, run_num))
     start_time = time.time()
 
     read_per_cycle = 100
@@ -58,7 +69,7 @@ if __name__ == "__main__":
     if args.outdir is not None:
         OUTDIR = args.outdir
     if args.outfile is not None:
-        colnames = ['evt_num', 'timestamp', 'pulse_height', 'centroid_x', 'centroid_y', 'width', 'length', 'dist', 'alpha']
+        colnames = ['evt_num', 'timestamp', 'pulse_height', 'centroid_x', 'centroid_y', 'width', 'length', 'dist', 'alpha', 'fit_success']
         ofile = OUTDIR + "/" + args.outfile
         with open(ofile, 'w') as paramfileio:
             paramfileio.write(" ".join(colnames))
@@ -71,18 +82,22 @@ if __name__ == "__main__":
         with open(flasher_file, 'w') as ffio:
             ffio.write("evt\n")
     current_evt = evt_start
+    print(ncycles)
     for icycle in range(ncycles):
         if icycle == (ncycles - 1):
-            stop_evt = current_evt+n_evts
+            stop_evt = n_evts+evt_start
+            if current_evt == stop_evt:
+                print("reached the end")
+                continue
         else:
             stop_evt = current_evt + read_per_cycle
-        print("Reading evt {} to {}...".format(current_evt, stop_evt))
+        print("Reading evt {} to {}...".format(current_evt, stop_evt-1))
         timestamps, ampl, blocks, phases = read_raw_signal(reader, range(current_evt, stop_evt), get_timestamp=True)
 
         for i in range(current_evt, stop_evt):
             im = show_image(ampl[i-current_evt], maxZ=4000, show=False)
             im_smooth = medfilt2d(im, 3)
-            if np.percentile(im_smooth[im_smooth != 0], 90) > 500:
+            if np.percentile(im_smooth[im_smooth != 0], 10) > 500:
                 print("This is probably a flasher event")
                 isf = 'f'
                 if args.flasher:
@@ -116,7 +131,7 @@ if __name__ == "__main__":
                         plt.tight_layout()
                         plt.savefig(OUTDIR +"/smooth_image_run{}_evt{}.png".format(run_num, i))
                     else:
-                        pulseheight, x, y, width, length, theta, dist, alpha = fit_gaussian2d(im_smooth, outfile=OUTDIR +"/smooth_image_fit_run{}_evt{}.png".format(run_num, i))
+                        pulseheight, x, y, width, length, theta, dist, alpha, success = fit_gaussian2d(im_smooth, outfile=OUTDIR +"/smooth_image_fit_run{}_evt{}.png".format(run_num, i))
                 else:
                     if args.flasher:
                         fig, ax = plt.subplots(subplot_kw={'aspect': 'equal'})
@@ -127,7 +142,7 @@ if __name__ == "__main__":
                         plt.tight_layout()
                         plt.savefig(OUTDIR +"/image_run{}_evt{}.png".format(run_num, i))
                     else:
-                        pulseheight, x, y, width, length, theta, dist, alpha = fit_gaussian2d(im, outfile=OUTDIR +"/image_fit_run{}_evt{}.png".format(run_num, i))
+                        pulseheight, x, y, width, length, theta, dist, alpha, success = fit_gaussian2d(im, outfile=OUTDIR +"/image_fit_run{}_evt{}.png".format(run_num, i))
                 if show:
                     plt.colorbar()
                     plt.show()
@@ -143,7 +158,7 @@ if __name__ == "__main__":
                         plt.ylim(0, 40)
                         plt.tight_layout()
                     else:
-                        pulseheight, x, y, width, length, theta, dist, alpha = fit_gaussian2d(im_smooth)
+                        pulseheight, x, y, width, length, theta, dist, alpha, success = fit_gaussian2d(im_smooth)
                 else:
                     if args.flasher:
                         fig, ax = plt.subplots(subplot_kw={'aspect': 'equal'})
@@ -152,7 +167,7 @@ if __name__ == "__main__":
                         plt.ylim(0, 40)
                         plt.tight_layout()
                     else:
-                        pulseheight, x, y, width, length, theta, dist, alpha = fit_gaussian2d(im)
+                        pulseheight, x, y, width, length, theta, dist, alpha, success = fit_gaussian2d(im)
 
                 plt.show()
             #show_image(ampl_crab1k[i], maxZ=4000, show=False, outfile=None)
@@ -170,8 +185,8 @@ if __name__ == "__main__":
             """
             if args.outfile is not None and not args.flasher:
                 with open(ofile, 'a') as paramfileio:
-                    paramfileio.write("{} {} {} {:.2f} {:.2f} {:.2f} {:.2f} {:.2f} {:.2f} {:.2f}\n".format(
-                        i, timestamps[i-current_evt], pulseheight, x, y, width, length, theta, dist, alpha))
+                    paramfileio.write("{} {} {} {:.2f} {:.2f} {:.2f} {:.2f} {:.2f} {:.2f} {:.2f} {}\n".format(
+                        i, timestamps[i-current_evt], pulseheight, x, y, width, length, theta, dist, alpha, success))
         current_evt = stop_evt
 
 

@@ -109,6 +109,16 @@ def get_reader(run_num, numBlock=4, nchannel=16,
     return reader
 
 
+def get_reader_calibrated(filename,
+               DATADIR=DATADIR,
+               ):
+
+    filename = "{}/{}".format(DATADIR, filename)
+    reader = target_io.EventFileReader(filename)
+    nEvents = reader.GetNEvents()
+    print("number of events in file {}: {}".format(filename, nEvents))
+    return reader
+
 def event_reader_evtloop_first(reader, event_list=range(10)):
     for ievt in event_list:
         for modInd in range(len(modList)):
@@ -147,7 +157,7 @@ def event_reader(reader, event_list=range(10)):
                         yield ievt, modInd, asic, ch, sample, wf.GetADC(sample), blockNumber, blockPhase, timestamp
 
 
-def get_trace(ampl, ievt, modInd, asic, ch, show=False, ax=None, title=None):
+def get_trace(ampl, ievt, modInd, asic, ch, show=False, ax=None, title=None, ylim=None):
     if show:
         if ax is None:
             fig, ax = plt.subplots(1,1)
@@ -155,6 +165,8 @@ def get_trace(ampl, ievt, modInd, asic, ch, show=False, ax=None, title=None):
         ax.set_xlabel("Sample")
         ax.set_ylabel("ADC")
         ax.set_title(title)
+        if ylim is not None:
+            ax.set_ylim(ylim)
     return ampl[ievt, modInd, asic, ch, :]
 
 
@@ -488,7 +500,9 @@ def plot_traces(ampl_ped5k, ievt, mods=range(nModules), asics = range(nasic), ch
                                                         phases=phases, show=show)
                     thismod_peaks.append(mean_c)
                 else:
-                    trace = get_trace(ampl_ped5k, ievt, modInd, asic, ch, show=show, ax=ax, title="ch {}".format(ch))
+                    trace = get_trace(ampl_ped5k, ievt, modInd, asic, ch,
+                                      show=show, ax=ax, title="ch {}".format(ch), ylim=ylim)
+                    thismod_peaks.append(np.mean(trace))
 
             if show:
                 plt.title("Mod {} Asic {}".format(modList[modInd], asic))
@@ -514,7 +528,8 @@ def plot_traces(ampl_ped5k, ievt, mods=range(nModules), asics = range(nasic), ch
         loc, locReflect = calcLoc(modInd)
         thismod_peaks = allmod_peaks[modInd]
         #ax = plt.subplot(gs[loc])
-        ax = axes[loc]
+        #ax = axes[loc]
+        ax = axes[locReflect]
         ax.hist(thismod_peaks)
         ax.set_xlabel("Mean ADC")
         if ylim is not None:
@@ -741,16 +756,17 @@ def fitgaussian(data):
     errorfunction = lambda p: np.ravel(gaussian(*p)(*np.indices(data.shape)) -
                                        data)
     p, success = sp.optimize.leastsq(errorfunction, params)
-    return p
+    return p, success
 
 
 def fit_gaussian2d(data, outfile=None):  # , amp=1, xc=0,yc=0,A=1,B=1,theta=0, offset=0):
     fig, ax = plt.subplots(subplot_kw={'aspect': 'equal'})
     # plt.matshow(data, cmap=plt.cm.gray)
     # plt.pcolor(data, cmap=plt.cm.gray)
-    plt.pcolor(data, cmap=plt.cm.gray)
+    cax = plt.pcolor(data, cmap=plt.cm.gray)
+    plt.colorbar(cax, ax=ax, fraction=0.046, pad=0.04)
 
-    params = fitgaussian(data)
+    params, success = fitgaussian(data)
     fit = gaussian(*params)
 
     # plt.contour(fit(*np.indices(data.shape)), cmap=plt.cm.copper, levels=[68, 90, 95])
@@ -813,7 +829,7 @@ def fit_gaussian2d(data, outfile=None):  # , amp=1, xc=0,yc=0,A=1,B=1,theta=0, o
     if outfile is not None:
         plt.savefig(outfile)
 
-    return height, x, y, width_x, width_y, theta, dist, alpha
+    return height, x, y, width_x, width_y, theta, dist, alpha, success
 
 
 # application
@@ -969,7 +985,7 @@ def find_bright_events(ampl_crab1k):
         plt.figure()
         ax = plt.subplot(111)
         cx = plt.pcolor(im7_smooth, vmin=1, vmax=4000)
-        pulseheight, x, y, width, length, theta, dist, alpha = fit_gaussian2d(im7_smooth)
+        pulseheight, x, y, width, length, theta, dist, alpha, success = fit_gaussian2d(im7_smooth)
         evts.append(i)
         pulseheights.append(pulseheight)
         xs.append(x)
