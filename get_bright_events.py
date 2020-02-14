@@ -69,7 +69,7 @@ if __name__ == "__main__":
     if args.outdir is not None:
         OUTDIR = args.outdir
     if args.outfile is not None:
-        colnames = ['evt_num', 'timestamp', 'pulse_height', 'centroid_x', 'centroid_y', 'width', 'length', 'dist', 'alpha', 'fit_success']
+        colnames = ['evt_num', 'timestamp', 'pulse_height', 'centroid_x', 'centroid_y', 'width', 'length', 'theta', 'dist', 'alpha', 'fit_success']
         ofile = OUTDIR + "/" + args.outfile
         with open(ofile, 'w') as paramfileio:
             paramfileio.write(" ".join(colnames))
@@ -97,7 +97,7 @@ if __name__ == "__main__":
         for i in range(current_evt, stop_evt):
             im = show_image(ampl[i-current_evt], maxZ=4000, show=False)
             im_smooth = medfilt2d(im, 3)
-            if np.percentile(im_smooth[im_smooth != 0], 10) > 500:
+            if np.percentile(im_smooth[im_smooth != 0], 90) > 500:
                 print("This is probably a flasher event")
                 isf = 'f'
                 if args.flasher:

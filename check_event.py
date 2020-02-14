@@ -42,8 +42,8 @@ if __name__ == "__main__":
 
     #print("2")
     im_smooth = medfilt2d(im, 3)
-    print("90 percentile ADC: ", np.percentile(im_smooth[im_smooth != 0], 10))
-    if np.percentile(im_smooth[im_smooth!=0], 10)>500:
+    print("90 percentile ADC: ", np.percentile(im_smooth[im_smooth != 0], 90))
+    if np.percentile(im_smooth[im_smooth!=0], 90)>500:
         print("This is probably a flasher event")
         isf = 'f'
     else:
