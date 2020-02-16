@@ -803,11 +803,22 @@ def fit_gaussian2d(data, outfile=None):  # , amp=1, xc=0,yc=0,A=1,B=1,theta=0, o
 
     # print(theta)
     # print(np.rad2deg(np.arctan2((y-20.), (x-20))))
-    alpha = np.abs(np.rad2deg(np.arctan2((y - 20.), (x - 20))) - theta)
-    alpha = np.abs((alpha + 180) % 360 - 180)
+
+    center_yx = np.array([20, 20])
+    centroid_yx = np.array([y, x])
+    ma_yx = np.array([y + 10 * np.cos(np.deg2rad(theta)), x + 10 * np.sin(np.deg2rad(theta))])
+    # ma_yx = np.array([y - 10 * np.cos(np.deg2rad(theta)),x - 10 * np.sin(np.deg2rad(theta))])
+
+    plt.plot([center_yx[0], centroid_yx[0], ma_yx[0]],
+             [center_yx[1], centroid_yx[1], ma_yx[1]], 'ro', ls='--', alpha=0.6)
+
+    line_c = center_yx - centroid_yx
+    line_ma = ma_yx - centroid_yx
+
+    cosine_alpha = np.dot(line_c, line_ma) / (np.linalg.norm(line_c) * np.linalg.norm(line_ma))
+    alpha = np.degrees(np.arccos(cosine_alpha))
     if alpha > 90 and alpha < 180:
         alpha = 180 - alpha
-
     plt.text(0.95, 0.05, """
             alpha : %.1f
             $\sigma_x$ : %.1f
@@ -815,11 +826,6 @@ def fit_gaussian2d(data, outfile=None):  # , amp=1, xc=0,yc=0,A=1,B=1,theta=0, o
              fontsize=14, horizontalalignment='right', alpha=0.8,
              verticalalignment='bottom', transform=ax.transAxes, color='y')
 
-    # print(alpha)
-    # if alpha>180:
-    #    alpha=alpha-180
-    # elif alpha>90:
-    #    alpha = 180-alpha
     print(
         "peak {}, cenX {:.2f}, cenY {:.2f}, width {:.2f}, length {:.2f}, theta {:.2f}, dist {:.2f}, alpha {:.2f}".format(
             height, x, y, width_x, width_y, theta, dist, alpha))
