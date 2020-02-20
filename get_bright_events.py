@@ -21,7 +21,7 @@ if __name__ == "__main__":
     parser.add_argument('--outfile', default=None, help="Text file to save parameters to. ")
     parser.add_argument('--outdir', default=None, help="Default to current dir ")
     parser.add_argument('--datadir', default=None, help="Default to dir {}".format(DATADIR))
-    parser.add_argument('-c', '--cleaning', default=None, help="Do some weird basic cleaning.")
+    parser.add_argument('-c', '--cleaning', action="store_true", help="Do some weird basic cleaning.")
     parser.add_argument('--calibrated', default=None, help="Read calibrated file instead of raw file.")
 
     args = parser.parse_args()
