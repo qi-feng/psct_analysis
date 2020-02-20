@@ -97,19 +97,7 @@ if __name__ == "__main__":
 
         for i in range(current_evt, stop_evt):
             im = show_image(ampl[i-current_evt], maxZ=4000, show=False)
-            if args.flatfield:
-                im = im / norm_map_default
-                if args.cleaning:
-                    im_clean = cleaning(im)
-                    im_smooth = medfilt2d(im_clean, 3)
-                else:
-                    im_smooth = medfilt2d(im, 3)
-
-            elif args.cleaning:
-                im_clean = cleaning(im)
-                im_smooth = medfilt2d(im_clean, 3)
-            else:
-                im_smooth = medfilt2d(im, 3)
+            im_smooth = medfilt2d(im_clean, 3)
 
             if np.percentile(im_smooth[im_smooth != 0], 90) > 500:
                 print("This is probably a flasher event")
@@ -129,6 +117,20 @@ if __name__ == "__main__":
             #plt.figure()
             #ax = plt.subplot(111)
             #cx = plt.pcolor(im_smooth, vmin=1, vmax=4000)
+            
+            if args.flatfield:
+                im = im / norm_map_default
+                if args.cleaning:
+                    im_clean = cleaning(im)
+                    im_smooth = medfilt2d(im_clean, 3)
+                else:
+                    im_smooth = medfilt2d(im, 3)
+
+            elif args.cleaning:
+                im_clean = cleaning(im)
+                im_smooth = medfilt2d(im_clean, 3)
+            else:
+                im_smooth = medfilt2d(im, 3)
 
 
 
