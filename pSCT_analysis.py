@@ -544,6 +544,17 @@ def plot_traces(ampl_ped5k, ievt, mods=range(nModules), asics = range(nasic), ch
 
 
 
+def cleaning(im, image_thresh=5, border_thresh=2.5):
+    # build PH distr, and histogram of pixel std; 2.5 and 5 x std
+    std = np.std(im)
+    mean = np.mean(im)
+    median = np.median(im)
+    im_ind = np.where(im>=(mean+std*image_thresh))
+    im[np.where(im<(mean+std*border_thresh))] = 0
+    #print(im_ind, im[im_ind])
+    return im
+
+
 
 def get_charge_distr_channel(ampl, modInd, asic, ch, sample,
                              blocks=None, choose_block=None,
@@ -740,11 +751,17 @@ def moments(data):
     # centroid
     x = (X * data).sum() / total
     y = (Y * data).sum() / total
-    col = data[:, int(y)]
     # M2s
-    width_x = np.sqrt(np.abs((np.arange(col.size) - y) ** 2 * col).sum() / col.sum())
-    row = data[int(x), :]
-    width_y = np.sqrt(np.abs((np.arange(row.size) - x) ** 2 * row).sum() / row.sum())
+    # col = data[:, int(y)]
+    # width_x = np.sqrt(np.abs((np.arange(col.size) - y) ** 2 * col).sum() / col.sum())
+    # row = data[int(x), :]
+    # width_y = np.sqrt(np.abs((np.arange(row.size) - x) ** 2 * row).sum() / row.sum())
+
+    width_x = np.sqrt((X * X * data).sum() / total - x * x)
+    width_y = np.sqrt((Y * Y * data).sum() / total - y * y)
+
+    # xy =  np.sqrt(np.abs((np.arange(row.size) - x) * (np.arange(col.size) - y) * row).sum() / row.sum())
+
     height = data.max()
     return height, x, y, width_x, width_y, 0
 
@@ -759,18 +776,19 @@ def fitgaussian(data):
     return p, success
 
 
-def fit_gaussian2d(data, outfile=None):  # , amp=1, xc=0,yc=0,A=1,B=1,theta=0, offset=0):
-    fig, ax = plt.subplots(subplot_kw={'aspect': 'equal'})
-    # plt.matshow(data, cmap=plt.cm.gray)
-    # plt.pcolor(data, cmap=plt.cm.gray)
-    cax = plt.pcolor(data, cmap=plt.cm.gray)
-    plt.colorbar(cax, ax=ax, fraction=0.046, pad=0.04)
+def fit_gaussian2d(data, outfile=None, plot=False, verbose=False):  # , amp=1, xc=0,yc=0,A=1,B=1,theta=0, offset=0):
+    if plot:
+        fig, ax = plt.subplots(subplot_kw={'aspect': 'equal'})
+        # plt.matshow(data, cmap=plt.cm.gray)
+        # plt.pcolor(data, cmap=plt.cm.gray)
+        cax = plt.pcolor(data, cmap=plt.cm.gray)
+        plt.colorbar(cax, ax=ax, fraction=0.046, pad=0.04)
+        ax = plt.gca()
 
     params, success = fitgaussian(data)
     fit = gaussian(*params)
 
     # plt.contour(fit(*np.indices(data.shape)), cmap=plt.cm.copper, levels=[68, 90, 95])
-    ax = plt.gca()
     (height, x, y, width_x, width_y, theta) = params
     # print(height, x, y, width_x, width_y, np.rad2deg(theta))
     width_x = np.abs(width_x)
@@ -779,27 +797,11 @@ def fit_gaussian2d(data, outfile=None):  # , amp=1, xc=0,yc=0,A=1,B=1,theta=0, o
         width_x, width_y = width_y, width_x
         theta = theta + 90
 
-    # plt.plot([x,x], [y,y+width_y], ls='-', color='c')
-    # plt.plot([x,x+width_x], [y,y], ls='-', color='c')
-    e = Ellipse(xy=np.array([y, x]), width=width_y * 2,
-                height=width_x * 2, angle=theta, linewidth=1, fill=False, alpha=0.9)
-    ax.add_artist(e)
-    e.set_color('c')
-    e2 = Ellipse(xy=np.array([y, x]), width=width_y * 4,
-                 height=width_x * 4, angle=theta, linewidth=1, fill=False, alpha=0.9)
-    ax.add_artist(e2)
-    e2.set_color('c')
-
-    plt.plot([20, y], [20, x], ls='--', alpha=0.6)
-
     dist = np.sqrt((20 - y) ** 2 + (20 - x) ** 2)
     # if theta<-180 or theta> 360:
     # print(theta)
     theta = (theta + 180) % 360 - 180
     # print(theta)
-
-    plt.plot([y - 10 * np.cos(np.deg2rad(theta)), y + 10 * np.cos(np.deg2rad(theta))],
-             [x - 10 * np.sin(np.deg2rad(theta)), x + 10 * np.sin(np.deg2rad(theta))], ls='--', alpha=0.6)
 
     # print(theta)
     # print(np.rad2deg(np.arctan2((y-20.), (x-20))))
@@ -809,9 +811,6 @@ def fit_gaussian2d(data, outfile=None):  # , amp=1, xc=0,yc=0,A=1,B=1,theta=0, o
     ma_yx = np.array([y + 10 * np.cos(np.deg2rad(theta)), x + 10 * np.sin(np.deg2rad(theta))])
     # ma_yx = np.array([y - 10 * np.cos(np.deg2rad(theta)),x - 10 * np.sin(np.deg2rad(theta))])
 
-    plt.plot([center_yx[0], centroid_yx[0], ma_yx[0]],
-             [center_yx[1], centroid_yx[1], ma_yx[1]], 'ro', ls='--', alpha=0.6)
-
     line_c = center_yx - centroid_yx
     line_ma = ma_yx - centroid_yx
 
@@ -819,21 +818,41 @@ def fit_gaussian2d(data, outfile=None):  # , amp=1, xc=0,yc=0,A=1,B=1,theta=0, o
     alpha = np.degrees(np.arccos(cosine_alpha))
     if alpha > 90 and alpha < 180:
         alpha = 180 - alpha
-    plt.text(0.95, 0.05, """
-            alpha : %.1f
-            $\sigma_x$ : %.1f
-            $\sigma_y$ : %.1f""" % (alpha, width_x, width_y),
-             fontsize=14, horizontalalignment='right', alpha=0.8,
-             verticalalignment='bottom', transform=ax.transAxes, color='y')
 
-    print(
-        "peak {}, cenX {:.2f}, cenY {:.2f}, width {:.2f}, length {:.2f}, theta {:.2f}, dist {:.2f}, alpha {:.2f}".format(
-            height, x, y, width_x, width_y, theta, dist, alpha))
-    plt.xlim(0, 40)
-    plt.ylim(0, 40)
-    plt.tight_layout()
-    if outfile is not None:
-        plt.savefig(outfile)
+    # plt.plot([x,x], [y,y+width_y], ls='-', color='c')
+    # plt.plot([x,x+width_x], [y,y], ls='-', color='c')
+    if plot:
+        e = Ellipse(xy=np.array([y, x]), width=width_y * 2,
+                    height=width_x * 2, angle=theta, linewidth=1, fill=False, alpha=0.9)
+        ax.add_artist(e)
+        e.set_color('c')
+        e2 = Ellipse(xy=np.array([y, x]), width=width_y * 4,
+                     height=width_x * 4, angle=theta, linewidth=1, fill=False, alpha=0.9)
+        ax.add_artist(e2)
+        e2.set_color('c')
+
+        plt.plot([20, y], [20, x], ls='--', alpha=0.6)
+        plt.plot([center_yx[0], centroid_yx[0], ma_yx[0]],
+                 [center_yx[1], centroid_yx[1], ma_yx[1]], 'ro', ls='--', alpha=0.6)
+        plt.plot([y - 10 * np.cos(np.deg2rad(theta)), y + 10 * np.cos(np.deg2rad(theta))],
+                 [x - 10 * np.sin(np.deg2rad(theta)), x + 10 * np.sin(np.deg2rad(theta))], ls='--', alpha=0.6)
+
+        plt.text(0.95, 0.05, """
+                alpha : %.1f
+                $\sigma_x$ : %.1f
+                $\sigma_y$ : %.1f""" % (alpha, width_x, width_y),
+                 fontsize=14, horizontalalignment='right', alpha=0.8,
+                 verticalalignment='bottom', transform=ax.transAxes, color='y')
+
+        plt.xlim(0, 40)
+        plt.ylim(0, 40)
+        plt.tight_layout()
+        if outfile is not None:
+            plt.savefig(outfile)
+    if verbose:
+        print(
+            "peak {}, cenX {:.2f}, cenY {:.2f}, width {:.2f}, length {:.2f}, theta {:.2f}, dist {:.2f}, alpha {:.2f}".format(
+                height, x, y, width_x, width_y, theta, dist, alpha))
 
     return height, x, y, width_x, width_y, theta, dist, alpha, success
 

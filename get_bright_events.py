@@ -21,7 +21,8 @@ if __name__ == "__main__":
     parser.add_argument('--outfile', default=None, help="Text file to save parameters to. ")
     parser.add_argument('--outdir', default=None, help="Default to current dir ")
     parser.add_argument('--datadir', default=None, help="Default to dir {}".format(DATADIR))
-    parser.add_argument('-c', '--calibrated', default=None, help="Read calibrated file instead of raw file.")
+    parser.add_argument('-c', '--cleaning', default=None, help="Do some weird basic cleaning.")
+    parser.add_argument('--calibrated', default=None, help="Read calibrated file instead of raw file.")
 
     args = parser.parse_args()
 
@@ -96,7 +97,20 @@ if __name__ == "__main__":
 
         for i in range(current_evt, stop_evt):
             im = show_image(ampl[i-current_evt], maxZ=4000, show=False)
-            im_smooth = medfilt2d(im, 3)
+            if args.flatfield:
+                im = im / norm_map_default
+                if args.cleaning:
+                    im_clean = cleaning(im)
+                    im_smooth = medfilt2d(im_clean, 3)
+                else:
+                    im_smooth = medfilt2d(im, 3)
+
+            elif args.cleaning:
+                im_clean = cleaning(im)
+                im_smooth = medfilt2d(im_clean, 3)
+            else:
+                im_smooth = medfilt2d(im, 3)
+
             if np.percentile(im_smooth[im_smooth != 0], 90) > 500:
                 print("This is probably a flasher event")
                 isf = 'f'
@@ -116,9 +130,7 @@ if __name__ == "__main__":
             #ax = plt.subplot(111)
             #cx = plt.pcolor(im_smooth, vmin=1, vmax=4000)
 
-            if args.flatfield:
-                im = im / norm_map_default
-                im_smooth = medfilt2d(im, 3)
+
 
             if args.save:
                 if args.smooth:
@@ -131,7 +143,13 @@ if __name__ == "__main__":
                         plt.tight_layout()
                         plt.savefig(OUTDIR +"/smooth_image_run{}_evt{}.png".format(run_num, i))
                     else:
-                        pulseheight, x, y, width, length, theta, dist, alpha, success = fit_gaussian2d(im_smooth, outfile=OUTDIR +"/smooth_image_fit_run{}_evt{}.png".format(run_num, i))
+                        if args.cleaning:
+                            pulseheight, x, y, width, length, theta, dist, alpha, success = fit_gaussian2d(im_smooth,
+                                                                                                           outfile=OUTDIR + "/clean_smooth_image_fit_run{}_evt{}.png".format(
+                                                                                                               run_num,
+                                                                                                               i))
+                        else:
+                            pulseheight, x, y, width, length, theta, dist, alpha, success = fit_gaussian2d(im_smooth, outfile=OUTDIR +"/smooth_image_fit_run{}_evt{}.png".format(run_num, i))
                 else:
                     if args.flasher:
                         fig, ax = plt.subplots(subplot_kw={'aspect': 'equal'})
@@ -142,7 +160,13 @@ if __name__ == "__main__":
                         plt.tight_layout()
                         plt.savefig(OUTDIR +"/image_run{}_evt{}.png".format(run_num, i))
                     else:
-                        pulseheight, x, y, width, length, theta, dist, alpha, success = fit_gaussian2d(im, outfile=OUTDIR +"/image_fit_run{}_evt{}.png".format(run_num, i))
+                        if args.cleaning:
+                            pulseheight, x, y, width, length, theta, dist, alpha, success = fit_gaussian2d(im_clean,
+                                                                                                           outfile=OUTDIR + "/image_fit_run{}_evt{}.png".format(
+                                                                                                               run_num,
+                                                                                                               i))
+                        else:
+                            pulseheight, x, y, width, length, theta, dist, alpha, success = fit_gaussian2d(im, outfile=OUTDIR +"/image_fit_run{}_evt{}.png".format(run_num, i))
                 if show:
                     plt.colorbar()
                     plt.show()
