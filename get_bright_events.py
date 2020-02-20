@@ -146,12 +146,12 @@ if __name__ == "__main__":
                         plt.savefig(OUTDIR +"/smooth_image_run{}_evt{}.png".format(run_num, i))
                     else:
                         if args.cleaning:
-                            pulseheight, x, y, width, length, theta, dist, alpha, success = fit_gaussian2d(im_smooth,
+                            pulseheight, x, y, width, length, theta, dist, alpha, success = fit_gaussian2d(im_smooth, plot=True,
                                                                                                            outfile=OUTDIR + "/clean_smooth_image_fit_run{}_evt{}.png".format(
                                                                                                                run_num,
                                                                                                                i))
                         else:
-                            pulseheight, x, y, width, length, theta, dist, alpha, success = fit_gaussian2d(im_smooth, outfile=OUTDIR +"/smooth_image_fit_run{}_evt{}.png".format(run_num, i))
+                            pulseheight, x, y, width, length, theta, dist, alpha, success = fit_gaussian2d(im_smooth, plot=True,  outfile=OUTDIR +"/smooth_image_fit_run{}_evt{}.png".format(run_num, i))
                 else:
                     if args.flasher:
                         fig, ax = plt.subplots(subplot_kw={'aspect': 'equal'})
@@ -163,12 +163,12 @@ if __name__ == "__main__":
                         plt.savefig(OUTDIR +"/image_run{}_evt{}.png".format(run_num, i))
                     else:
                         if args.cleaning:
-                            pulseheight, x, y, width, length, theta, dist, alpha, success = fit_gaussian2d(im_clean,
+                            pulseheight, x, y, width, length, theta, dist, alpha, success = fit_gaussian2d(im_clean,plot=True,
                                                                                                            outfile=OUTDIR + "/image_fit_run{}_evt{}.png".format(
                                                                                                                run_num,
                                                                                                                i))
                         else:
-                            pulseheight, x, y, width, length, theta, dist, alpha, success = fit_gaussian2d(im, outfile=OUTDIR +"/image_fit_run{}_evt{}.png".format(run_num, i))
+                            pulseheight, x, y, width, length, theta, dist, alpha, success = fit_gaussian2d(im, plot=True, outfile=OUTDIR +"/image_fit_run{}_evt{}.png".format(run_num, i))
                 if show:
                     plt.colorbar()
                     plt.show()
