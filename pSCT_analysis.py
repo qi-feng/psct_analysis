@@ -158,17 +158,33 @@ def event_reader_allsamples(reader, event_list=range(10), calibrated=False):
                     blockNumber = (packet.GetRow() + packet.GetColumn() * 8)
                     blockPhase = (packet.GetBlockPhase())
                     timestamp = packet.GetTACKTime()
-                    if packet.GetWaveformSamples() != nSamples:
-                        print("evt {}, mod {}, asic {}, ch {}, samples {}, not as expected {} samples".format(ievt, modList[modInd], asic, ch, packet.GetWaveformSamples(), nSamples))
                     wf = packet.GetWaveform((asic * nchannel + ch) % chPerPacket)
+                    if packet.GetWaveformSamples() != nSamples:
+                        #print("evt {}, mod {}, asic {}, ch {}, samples {}, not as expected {} samples".format(ievt, modList[modInd], asic, ch, packet.GetWaveformSamples(), nSamples))
+                        if packet.GetWaveformSamples() == 0:
+                            #print("Got 0 samples; setting wave form to 0")
+                            wfarr = np.zeros(nSamples, dtype=np.uint16)
+                        else:
+                            if calibrated:
+                                wfarr = ((wf.GetADC16bitArray(nSamples)) / SCALE) - OFFSET
+                            else:
+                                wfarr = wf.GetADCArray(nSamples)
+                        #print(wf.GetADCArray(nSamples))
+                    else:
+                        if calibrated:
+                            wfarr = ((wf.GetADC16bitArray(nSamples)) / SCALE) - OFFSET
+                        else:
+                            wfarr = wf.GetADCArray(nSamples)
+                    #    print("+++ good event+++")
+                    #    print(wf.GetADCArray(nSamples))
                     #for sample in range(nSamples):
                     if calibrated:
                             #((wf.GetADC16bitArray(Nsamples)) / SCALE) - OFFSET
-                            yield ievt, modInd, asic, ch, ((wf.GetADC16bitArray(nSamples)) / SCALE) - OFFSET, blockNumber, blockPhase, timestamp
+                            yield ievt, modInd, asic, ch, wfarr, blockNumber, blockPhase, timestamp
                             #yield ievt, modInd, asic, ch, sample, ((wf.GetADC16bit(sample)) / SCALE) - OFFSET, blockNumber, blockPhase, timestamp
                     else:
                             #yield ievt, modInd, asic, ch, sample, wf.GetADC(sample), blockNumber, blockPhase, timestamp
-                            yield ievt, modInd, asic, ch, wf.GetADCArray(nSamples), blockNumber, blockPhase, timestamp
+                            yield ievt, modInd, asic, ch, wfarr, blockNumber, blockPhase, timestamp
 
 
 def event_reader(reader, event_list=range(10), calibrated=False):
