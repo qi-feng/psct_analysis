@@ -41,9 +41,11 @@ if __name__ == "__main__":
     if args.calibrated is not None:
         reader = get_reader_calibrated(args.calibrated, DATADIR=DATADIR) #("cal328555_100evt.r1")
         calib_string = "calibrated"
+        calibrated = True
     else:
         reader = get_reader(run_num, DATADIR=DATADIR)
         calib_string = ""
+        calibrated = False
 
     if n_evts == -1:
         n_evts = reader.GetNEvents() - evt_start
@@ -93,13 +95,15 @@ if __name__ == "__main__":
         else:
             stop_evt = current_evt + read_per_cycle
         print("Reading evt {} to {}...".format(current_evt, stop_evt-1))
-        timestamps, ampl, blocks, phases = read_raw_signal(reader, range(current_evt, stop_evt), get_timestamp=True)
+        #timestamps, ampl, blocks, phases = read_raw_signal(reader, range(current_evt, stop_evt), get_timestamp=True, calibrated = calibrated)
+        timestamps, ampl, blocks, phases = read_raw_signal_array(reader, range(current_evt, stop_evt), get_timestamp=True, calibrated = calibrated)
 
         for i in range(current_evt, stop_evt):
             im = show_image(ampl[i-current_evt], maxZ=4000, show=False)
             im_smooth = medfilt2d(im, 3)
 
-            if np.percentile(im_smooth[im_smooth != 0], 90) > 500:
+            #if np.percentile(im_smooth[im_smooth != 0], 90) > 500:
+            if np.percentile(im_smooth[im_smooth != 0], 20) > 200:
                 print("This is probably a flasher event")
                 isf = 'f'
                 if args.flasher:

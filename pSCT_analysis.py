@@ -37,6 +37,9 @@ nchannel = 16
 nasic = 4
 chPerPacket = 32
 
+SCALE = 13.6
+OFFSET = 700
+
 modList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 100, 103, 106, 107, 108, 111, 112, 114, 115, 119, 121, 123, 124, 125, 126]
 nModules = len(modList)
 
@@ -115,9 +118,13 @@ def get_reader_calibrated(filename,
 
     filename = "{}/{}".format(DATADIR, filename)
     reader = target_io.EventFileReader(filename)
+    #header = target_driver.EventHeader()
+    #calreader = target_io.WaveformArrayReader(filename)
+    #nEvents = calreader.fNEvents
     nEvents = reader.GetNEvents()
     print("number of events in file {}: {}".format(filename, nEvents))
     return reader
+
 
 def event_reader_evtloop_first(reader, event_list=range(10)):
     for ievt in event_list:
@@ -138,7 +145,33 @@ def event_reader_evtloop_first(reader, event_list=range(10)):
                         yield ievt, modInd, asic, ch, sample, wf.GetADC(sample), blockNumber, blockPhase, timestamp
 
 
-def event_reader(reader, event_list=range(10)):
+def event_reader_allsamples(reader, event_list=range(10), calibrated=False):
+    for modInd in range(len(modList)):
+        for asic in range(nasic):
+            for ch in range(nchannel):
+                for ievt in event_list:
+                    rawdata = reader.GetEventPacket(ievt, int((((nasic * modInd + asic) * nchannel) + ch) / chPerPacket))
+                    packet = target_driver.DataPacket()
+                    packet.Assign(rawdata, reader.GetPacketSize())
+                    header = target_driver.EventHeader()
+                    reader.GetEventHeader(ievt, header)
+                    blockNumber = (packet.GetRow() + packet.GetColumn() * 8)
+                    blockPhase = (packet.GetBlockPhase())
+                    timestamp = packet.GetTACKTime()
+                    if packet.GetWaveformSamples() != nSamples:
+                        print("evt {}, mod {}, asic {}, ch {}, samples {}, not as expected {} samples".format(ievt, modList[modInd], asic, ch, packet.GetWaveformSamples(), nSamples))
+                    wf = packet.GetWaveform((asic * nchannel + ch) % chPerPacket)
+                    #for sample in range(nSamples):
+                    if calibrated:
+                            #((wf.GetADC16bitArray(Nsamples)) / SCALE) - OFFSET
+                            yield ievt, modInd, asic, ch, ((wf.GetADC16bitArray(nSamples)) / SCALE) - OFFSET, blockNumber, blockPhase, timestamp
+                            #yield ievt, modInd, asic, ch, sample, ((wf.GetADC16bit(sample)) / SCALE) - OFFSET, blockNumber, blockPhase, timestamp
+                    else:
+                            #yield ievt, modInd, asic, ch, sample, wf.GetADC(sample), blockNumber, blockPhase, timestamp
+                            yield ievt, modInd, asic, ch, wf.GetADCArray(nSamples), blockNumber, blockPhase, timestamp
+
+
+def event_reader(reader, event_list=range(10), calibrated=False):
     for modInd in range(len(modList)):
         for asic in range(nasic):
             for ch in range(nchannel):
@@ -154,7 +187,33 @@ def event_reader(reader, event_list=range(10)):
                     wf = packet.GetWaveform((asic * nchannel + ch) % chPerPacket)
                     for sample in range(nSamples):
                         # ampl[ievt, modInd, asic, ch, sample] = wf.GetADC(sample)
+                        if calibrated:
+                            #((wf.GetADC16bitArray(Nsamples)) / SCALE) - OFFSET
+                            #yield ievt, modInd, asic, ch, sample, ((wf.GetADC16bitArray(nSamples)) / SCALE) - OFFSET, blockNumber, blockPhase, timestamp
+                            yield ievt, modInd, asic, ch, sample, ((wf.GetADC16bit(sample)) / SCALE) - OFFSET, blockNumber, blockPhase, timestamp
+                        else:
+                            yield ievt, modInd, asic, ch, sample, wf.GetADC(sample), blockNumber, blockPhase, timestamp
+
+
+def cal_event_reader(calreader, event_list=range(10)):
+    for modInd in range(len(modList)):
+        for asic in range(nasic):
+            for ch in range(nchannel):
+                for ievt in event_list:
+                    rawdata = reader.GetEventPacket(ievt, int((((nasic * modInd + asic) * nchannel) + ch) / chPerPacket))
+                    packet = target_driver.DataPacket()
+                    packet.Assign(rawdata, reader.GetPacketSize())
+                    header = target_driver.EventHeader()
+                    reader.GetEventHeader(ievt, header)
+                    blockNumber = (packet.GetRow() + packet.GetColumn() * 8)
+                    blockPhase = (packet.GetBlockPhase())
+                    timestamp = packet.GetTACKTime()
+                    wf = packet.GetWaveform((asic * nchannel + ch) % chPerPacket)
+                    for sample in range(nSamples):
+                        # ampl[ievt, modInd, asic, ch, sample] = wf.GetADC(sample)
+                        #((wf_cal.GetADC16bitArray(Nsamples)) / SCALE) - OFFSET
                         yield ievt, modInd, asic, ch, sample, wf.GetADC(sample), blockNumber, blockPhase, timestamp
+
 
 
 def get_trace(ampl, ievt, modInd, asic, ch, show=False, ax=None, title=None, ylim=None):
@@ -362,6 +421,7 @@ def get_trace_window_block_test(ampl, ievt, modInd, asic, ch,
 
 
 def read_raw_signal(reader, events=range(10), numBlock=4, nchannel=16,
+                    calibrated=False,
                     nasic=4, chPerPacket=32, ADC_cut=None, get_timestamp=False,
                     modList=[1, 2, 3, 4, 5, 6, 7, 8, 9, 100, 103, 106, 107, 108, 111, 112, 114, 115, 119, 121, 123, 124,
                              125, 126],
@@ -375,7 +435,7 @@ def read_raw_signal(reader, events=range(10), numBlock=4, nchannel=16,
     phases = np.zeros(nEvents)
     if get_timestamp:
         timestamps = np.zeros(nEvents)
-    data_ = event_reader(reader, events)
+    data_ = event_reader(reader, events, calibrated=calibrated)
     icount = 0
     evt_dict={} #key is actual evt number, value is array index; this is needed because each event is revisted for diff mod asics etc
     prev_evt = 0
@@ -408,6 +468,65 @@ def read_raw_signal(reader, events=range(10), numBlock=4, nchannel=16,
             #print("Filling {}".format(icount))
             #print(icount, ievt, modInd, asic, ch, sample, blockNumber, blockPhase)
             ampl[icount, modInd, asic, ch, sample] = wf_
+            if get_timestamp:
+                timestamps[icount] = timestamp
+
+        #else:
+        #    ampl[ievt, modInd, asic, ch, sample] = wf_
+    print("{} events read".format(nEvents))
+    if get_timestamp:
+        return timestamps, ampl, blocks, phases
+    return ampl, blocks, phases
+
+
+def read_raw_signal_array(reader, events=range(10), numBlock=4, nchannel=16,
+                    calibrated=False,
+                    nasic=4, chPerPacket=32, ADC_cut=None, get_timestamp=False,
+                    modList=[1, 2, 3, 4, 5, 6, 7, 8, 9, 100, 103, 106, 107, 108, 111, 112, 114, 115, 119, 121, 123, 124,
+                             125, 126],
+                    OUTDIR=OUTDIR,
+                    ):
+    nModules = len(modList)
+    nEvents = len(events)
+    print("{} events are going to be read".format(nEvents))
+    ampl = np.zeros([nEvents, nModules, nasic, nchannel, nSamples])
+    blocks = np.zeros(nEvents)
+    phases = np.zeros(nEvents)
+    if get_timestamp:
+        timestamps = np.zeros(nEvents)
+    data_ = event_reader_allsamples(reader, events, calibrated=calibrated)
+    icount = 0
+    evt_dict={} #key is actual evt number, value is array index; this is needed because each event is revisted for diff mod asics etc
+    prev_evt = 0
+    ipix=0
+    if events[0] != 0:
+        print("Note that starting event is not 0")
+    for ievt, modInd, asic, ch, wf_, blockNumber, blockPhase, timestamp in data_:
+            if icount == 0 and not evt_dict:
+                prev_evt = ievt
+                evt_dict[ievt] = 0
+                blocks[0]=blockNumber
+                phases[0]=blockPhase
+            if prev_evt != ievt:
+                #print("{} pixels found in event {} mod {} asic {} ch {}, filled {}".format(ipix, prev_evt, modList[modInd],asic, ch, icount))
+                ipix=0
+                #print(np.mean(ampl[icount, :, :, :, :]))
+                if ievt not in evt_dict:
+                    icount = np.max(list(evt_dict.values()))+1
+                    evt_dict[ievt] = icount
+                    blocks[icount]=blockNumber
+                    phases[icount]=blockPhase
+                else:
+                    icount = evt_dict[ievt]
+                prev_evt = ievt
+                if icount>(nEvents-1):
+                    print("shouldn't reach here")
+                    break
+
+            ipix+=1
+            #print("Filling {}".format(icount))
+            #print(icount, ievt, modInd, asic, ch, sample, blockNumber, blockPhase)
+            ampl[icount, modInd, asic, ch, :] = wf_
             if get_timestamp:
                 timestamps[icount] = timestamp
 
@@ -1043,7 +1162,8 @@ if __name__ == "__main__":
     reader = get_reader(run_num)
     # ampl_crab5k, blocks_crab5k, phases_crab5k = read_raw_signal(reader_crab, range(5000))
 
-    ampl, blocks, phases = read_raw_signal(reader, range(evt_num, evt_num+n_evts))
+    #ampl, blocks, phases = read_raw_signal(reader, range(evt_num, evt_num+n_evts))
+    ampl, blocks, phases = read_raw_signal_array(reader, range(evt_num, evt_num+n_evts))
     np.save("run{}_evt{}to{}_amplitude.npy".format(run_num, evt_num, evt_num+n_evts), ampl)
     np.save("run{}_evt{}to{}_blocks.npy".format(run_num, evt_num, evt_num+n_evts), blocks)
     np.save("run{}_evt{}to{}_phases.npy".format(run_num, evt_num, evt_num+n_evts), phases)
