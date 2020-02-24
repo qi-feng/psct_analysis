@@ -55,9 +55,9 @@ if __name__ == "__main__":
             stop_evt = n_evts
         else:
             stop_evt = current_evt + read_per_cycle
-        if verbose:
+        if args.verbose:
             print("Reading evt {} to {}...".format(current_evt, stop_evt))
-        evts[current_evt:stop_evt], timestamps[current_evt:stop_evt] = read_timestamps(reader, range(current_evt, stop_evt))
+        evts[current_evt:stop_evt], timestamps[current_evt:stop_evt] = read_timestamps(reader, range(current_evt, stop_evt), verbose=args.verbose)
 
         if args.outfile is not None:
             with open(ofile, 'a') as paramfileio:
