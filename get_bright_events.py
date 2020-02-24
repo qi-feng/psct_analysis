@@ -56,7 +56,7 @@ if __name__ == "__main__":
     print("Reding {} events starting from evt {} in run {}".format(n_evts, evt_start, run_num))
     start_time = time.time()
 
-    read_per_cycle = 100
+    read_per_cycle = 1000
     ncycles = n_evts//read_per_cycle + 1
     # ampl_crab5k, blocks_crab5k, phases_crab5k = read_raw_signal(reader_crab, range(5000))
 
