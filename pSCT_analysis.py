@@ -211,6 +211,23 @@ def event_reader(reader, event_list=range(10), calibrated=False):
                             yield ievt, modInd, asic, ch, sample, wf.GetADC(sample), blockNumber, blockPhase, timestamp
 
 
+def timestamp_reader(reader, event_list=range(10), calibrated=False):
+    modInd = 20
+    asic = 2
+    ch = 4
+    for ievt in event_list:
+        rawdata = reader.GetEventPacket(ievt, int((((nasic * modInd + asic) * nchannel) + ch) / chPerPacket))
+        packet = target_driver.DataPacket()
+        packet.Assign(rawdata, reader.GetPacketSize())
+        #header = target_driver.EventHeader()
+        #reader.GetEventHeader(ievt, header)
+        #blockNumber = (packet.GetRow() + packet.GetColumn() * 8)
+        #blockPhase = (packet.GetBlockPhase())
+        timestamp = packet.GetTACKTime()
+        #wf = packet.GetWaveform((asic * nchannel + ch) % chPerPacket)
+        yield ievt, timestamp
+
+
 def cal_event_reader(calreader, event_list=range(10)):
     for modInd in range(len(modList)):
         for asic in range(nasic):
@@ -604,6 +621,26 @@ def read_raw_signal_evtloop_first(reader, events=range(10), numBlock=4, nchannel
         #    ampl[ievt, modInd, asic, ch, sample] = wf_
     print("{} events read".format(nEvents))
     return ampl, blocks, phases
+
+
+def read_timestamps(reader, events=range(10),
+                    OUTDIR=OUTDIR,
+                    ):
+    nEvents = len(events)
+    print("{} events are going to be read".format(nEvents))
+    timestamps = np.zeros(nEvents)
+    evts = np.zeros(nEvents)
+    data_ = timestamp_reader(reader, events)
+    icount = 0
+    if events[0] != 0:
+        print("Note that starting event is not 0")
+    for ievt, timestamp in data_:
+        evts[icount]=ievt
+        timestamps[icount]=timestamp
+        icount += 1
+    print("{} events read".format(nEvents))
+    return evts, timestamps
+
 
 # diagnostic
 def plot_traces(ampl_ped5k, ievt, mods=range(nModules), asics = range(nasic), channels=range(nchannel),

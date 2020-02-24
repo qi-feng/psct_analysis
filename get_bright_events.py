@@ -53,7 +53,7 @@ if __name__ == "__main__":
         n_evts = reader.GetNEvents() - evt_start
         print("n_evts provided is too large, changing to {}".format(n_evts))
 
-    print("Reding {} events starting from evt {} in run {}".format(n_evts, evt_start, run_num))
+    print("Reading {} events starting from evt {} in run {}".format(n_evts, evt_start, run_num))
     start_time = time.time()
 
     read_per_cycle = 1000
