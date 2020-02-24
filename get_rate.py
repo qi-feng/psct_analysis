@@ -37,7 +37,7 @@ if __name__ == "__main__":
             paramfileio.write(" ".join(colnames))
             paramfileio.write("\n")
 
-    print("Reading {} events starting from evt {} in run {}".format(n_evts, n_evts, run_num))
+    print("Reading {} events starting from evt {} in run {}".format(n_evts, evt_start, run_num))
     start_time = time.time()
 
     read_per_cycle = 1000
