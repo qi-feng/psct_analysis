@@ -9,6 +9,7 @@ if __name__ == "__main__":
     parser.add_argument('run', type=int, default=328540, help="Run number")
     parser.add_argument('-i', '--interactive', action="store_true", help="Flag to show interactive plots.")
     parser.add_argument('-s', '--save', action="store_true", help="Flag to save plots.")
+    parser.add_argument('-v', '--verbose', action="store_true", help="Flag to be verbose.")
     parser.add_argument('-b','--binsize', type=float, default=1.0, help="Bin size in s. ")
     parser.add_argument('-o','--outfile', default=None, help="Text file to save parameters to. ")
     parser.add_argument('--outdir', default=None, help="Default to current dir ")
@@ -54,7 +55,8 @@ if __name__ == "__main__":
             stop_evt = n_evts
         else:
             stop_evt = current_evt + read_per_cycle
-        print("Reading evt {} to {}...".format(current_evt, stop_evt))
+        if verbose:
+            print("Reading evt {} to {}...".format(current_evt, stop_evt))
         evts[current_evt:stop_evt], timestamps[current_evt:stop_evt] = read_timestamps(reader, range(current_evt, stop_evt))
 
         if args.outfile is not None:
@@ -75,7 +77,7 @@ if __name__ == "__main__":
     plt.legend(loc='best')
     plt.tight_layout()
     if args.outfile is None:
-        outfile = "rate_run{}.png".format(runnum)
+        outfile = "rate_run{}_bin{:.0f}s.png".format(runnum, args.binsize)
     else:
         outfile = args.outfile[:-4]+".png"
     plt.savefig(outfile)

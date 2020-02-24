@@ -572,14 +572,15 @@ def read_raw_signal_array(reader, events=range(10), numBlock=4, nchannel=16,
 
 
 def read_raw_signal_evtloop_first(reader, events=range(10), numBlock=4, nchannel=16,
-                    nasic=4, chPerPacket=32,
+                    nasic=4, chPerPacket=32, verbose=False,
                     modList=[1, 2, 3, 4, 5, 6, 7, 8, 9, 100, 103, 106, 107, 108, 111, 112, 114, 115, 119, 121, 123, 124,
                              125, 126],
                     OUTDIR=OUTDIR,
                     ):
     nModules = len(modList)
     nEvents = len(events)
-    print("{} events are going to be read".format(nEvents))
+    if verbose:
+        print("{} events are going to be read".format(nEvents))
     ampl = np.zeros([nEvents, nModules, nasic, nch, nSamples])
     blocks = np.zeros(nEvents)
     phases = np.zeros(nEvents)
@@ -589,7 +590,8 @@ def read_raw_signal_evtloop_first(reader, events=range(10), numBlock=4, nchannel
     prev_evt = 0
     ipix=0
     if events[0] != 0:
-        print("Note that starting event is not 0")
+        if verbose:
+            print("Note that starting event is not 0")
     for ievt, modInd, asic, ch, sample, wf_, blockNumber, blockPhase, timestamp in data_:
             if icount == 0 and not evt_dict:
                 prev_evt = ievt
@@ -623,22 +625,25 @@ def read_raw_signal_evtloop_first(reader, events=range(10), numBlock=4, nchannel
     return ampl, blocks, phases
 
 
-def read_timestamps(reader, events=range(10),
+def read_timestamps(reader, events=range(10),verbose=False,
                     OUTDIR=OUTDIR,
                     ):
     nEvents = len(events)
-    print("{} events are going to be read".format(nEvents))
+    if verbose:
+        print("{} events are going to be read".format(nEvents))
     timestamps = np.zeros(nEvents)
     evts = np.zeros(nEvents)
     data_ = timestamp_reader(reader, events)
     icount = 0
     if events[0] != 0:
-        print("Note that starting event is not 0")
+        if verbose:
+            print("Note that starting event is not 0")
     for ievt, timestamp in data_:
         evts[icount]=ievt
         timestamps[icount]=timestamp
         icount += 1
-    print("{} events read".format(nEvents))
+    if verbose:
+        print("{} events read".format(nEvents))
     return evts, timestamps
 
 
