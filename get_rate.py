@@ -77,7 +77,7 @@ if __name__ == "__main__":
     plt.legend(loc='best')
     plt.tight_layout()
     if args.outfile is None:
-        outfile = "rate_run{}_bin{:.0f}s.png".format(runnum, args.binsize)
+        outfile = "rate_run{}_bin{:.0f}s.png".format(run_num, args.binsize)
     else:
         outfile = args.outfile[:-4]+".png"
     plt.savefig(outfile)
