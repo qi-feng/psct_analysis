@@ -137,7 +137,9 @@ if __name__ == "__main__":
                 im_smooth = medfilt2d(im, 3)
 
 
-
+            if (im_smooth>50).sum() < 10:
+                continue
+                
             if args.save:
                 if args.smooth:
                     if args.flasher:
