@@ -32,16 +32,21 @@ if __name__ == "__main__":
 
     if args.calibrated is not None:
         reader = get_reader_calibrated(args.calibrated, DATADIR=DATADIR) #("cal328555_100evt.r1")
-        calib_string = "calibrated_pedHVoff_no_baseline_subtraction"
+        #calib_string = "calibrated_pedHVoff_no_baseline_subtraction"
+        calib_string = "calibrated_no_baseline_subtraction"
+        calibrated = True
     else:
         reader = get_reader(run_num, DATADIR=DATADIR)
         if args.baseline:
             calib_string = "simple_baseline_subtraction"
         else:
             calib_string = "raw_no_baseline_subtraction"
+        calibrated = False
     # ampl_crab5k, blocks_crab5k, phases_crab5k = read_raw_signal(reader_crab, range(5000))
 
-    ampl, blocks, phases = read_raw_signal(reader, range(evt_num, evt_num+n_evts))
+    #ampl, blocks, phases = read_raw_signal(reader, range(evt_num, evt_num+n_evts), calibrated=calibrated)
+    timestamps, ampl, blocks, phases = read_raw_signal_array(reader, range(evt_num, evt_num+n_evts), calibrated=calibrated, get_timestamp=True,)
+
     #print("1")
     #print(ampl.shape, ampl[0].shape, blocks[0], phases[0])
     #print(ampl[0])
@@ -51,7 +56,9 @@ if __name__ == "__main__":
     #print("2")
     im_smooth = medfilt2d(im, 3)
     print("90 percentile ADC: ", np.percentile(im_smooth[im_smooth != 0], 90))
-    if np.percentile(im_smooth[im_smooth!=0], 90)>500:
+    print("20 percentile ADC: ", np.percentile(im_smooth[im_smooth != 0], 20))
+    #if np.percentile(im_smooth[im_smooth!=0], 90)>500:
+    if np.percentile(im_smooth[im_smooth != 0], 20) > 300:
         print("This is probably a flasher event")
         isf = 'f'
     else:
