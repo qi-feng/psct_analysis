@@ -125,6 +125,56 @@ def get_reader_calibrated(filename,
     print("number of events in file {}: {}".format(filename, nEvents))
     return reader
 
+def read_calibrated_data(filename, DATADIR=DATADIR,event_list=range(10)):
+    filename = "{}/{}".format(DATADIR, filename)
+    reader = target_io.WaveformArrayReader(filename)
+    isR1 = reader.fR1
+    n_pixels = reader.fNPixels
+    n_mods  = reader.fNModules
+    n_pix_per_mod = reader.fNSuperpixelsPerModule
+    n_samples = reader.fNSamples
+    n_total_events = reader.fNEvents
+    if max(event_list) > n_total_events:
+        print("Event list contains out of range evts")
+        return
+    n_events = len(event_list)
+    first_cell_ids = np.zeros(n_events, dtype=np.uint16)
+    stale_bit = np.zeros(n_events, dtype=bool)  ## data format to be checked
+    timestamps = np.zeros(n_events)  ## data format to be checked
+    # Generate the memory to be filled in-place
+    if isR1:
+            waveforms = np.zeros((n_events, n_pixels, n_samples), dtype=np.float32)
+            #waveforms = np.zeros((n_events, n_mods, 4, n_pix_per_mod, n_samples), dtype=np.float32)
+            #ampl = np.zeros([nEvents, nModules, nasic, nchannel, nSamples])
+            # for event_index in tqdm(range(0,n_events)):
+            for event_index, evt_id in enumerate(event_list):
+                # reader.GetR1Event(event_index,waveforms[event_index],first_cell_ids[event_index])
+                # _first_cell_id, _stale, _missing_packets, _tack, _cpu_s, _cpu_ns = reader.GetR1Event(event_index,waveforms[event_index])
+                first_cell_ids[event_index], stale_bit[
+                    event_index], _missing_packets, _tack, _cpu_s, timestamps[event_index] = reader.GetR1Event(evt_id,
+                                                                                                    waveforms[
+                                                                                                        event_index])
+            # reader.GetR1Events(0,waveforms,first_cell_ids)
+    else:
+            waveforms = np.zeros((n_events, n_pixels, n_samples), dtype=np.ushort)  # needed for R0 data
+            # for event_index in tqdm(range(0,n_events)):
+            for event_index, evt_id in enumerate(event_list):
+                # reader.GetR0Event(event_index,waveforms[event_index],first_cell_ids[event_index])
+                first_cell_ids[event_index], stale_bit[
+                    event_index], _missing_packets, _tack, _cpu_s, timestamps[event_index] = reader.GetR0Event(evt_id,
+                                                                                                    waveforms[
+                                                                                                        event_index])
+                # current_cpu_ns = reader.fCurrentTimeNs
+                # current_cpu_s = reader.fCurrentTimeSec
+                # tack_timestamp = reader.fCurrentTimeTack
+                # cpu_timestamp = ((current_cpu_s * 1E9) + np.int64(current_cpu_ns))/1000000
+                # have the cpu timestamp in some nice format
+                # t_cpu = pd.to_datetime(np.int64(current_cpu_s * 1E9) + np.int64(current_cpu_ns),unit='ns')
+
+    # print ("Stale events detected: ", np.where(stale_bit)[0])
+    # np.savetxt("stale_list.txt",a)
+    return waveforms.reshape(n_events, n_mods, 4, n_pix_per_mod, n_samples), timestamps, first_cell_ids, stale_bit
+
 
 def event_reader_evtloop_first(reader, event_list=range(10)):
     for ievt in event_list:
