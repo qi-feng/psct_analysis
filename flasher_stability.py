@@ -16,7 +16,7 @@ if __name__ == "__main__":
     #parser.add_argument('-i', '--interactive', action="store_true", help="Flag to show interactive plots.")
     parser.add_argument('-s', '--save', action="store_true", help="Flag to save plots.")
     parser.add_argument('--flatfield', action="store_true", help="Flag to try flatfielding.")
-    parser.add_argument('-l', '--flasher_file', default="", help="File to save flasher event numbers.")
+    parser.add_argument('-f', '--flasher_file', default="", help="File to save flasher event numbers.")
     parser.add_argument('--outfile', default=None, help="Text file to save parameters to. ")
     parser.add_argument('--outdir', default=None, help="Default to current dir ")
     parser.add_argument('--datadir', default=None, help="Default to dir {}".format(DATADIR))
