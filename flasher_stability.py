@@ -108,15 +108,15 @@ if __name__ == "__main__":
 
                     if args.flatfield:
                         im = im / norm_map_default
-                        if args.cleaning:
-                            im_clean = cleaning(im)
-                            im_smooth = medfilt2d(im_clean, 3)
-                        else:
-                            im_smooth = medfilt2d(im, 3)
+                        #if args.cleaning:
+                        #    im_clean = cleaning(im)
+                        #    im_smooth = medfilt2d(im_clean, 3)
+                        #else:
+                        im_smooth = medfilt2d(im, 3)
 
-                    elif args.cleaning:
-                        im_clean = cleaning(im)
-                        im_smooth = medfilt2d(im_clean, 3)
+                    #elif args.cleaning:
+                    #    im_clean = cleaning(im)
+                    #    im_smooth = medfilt2d(im_clean, 3)
                     else:
                         im_smooth = medfilt2d(im, 3)
 
