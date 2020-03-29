@@ -56,7 +56,7 @@ if __name__ == "__main__":
         isR1 = reader.fR1
         n_total_events = reader.fNEvents
 
-        print("Reading events in run {}; found {} events in total".format( run_num, n_evts ))
+        print("Reading events in run {}; found {} events in total".format( run_num, n_total_events ))
 
         read_per_cycle = 3000
         start_evts = range(n_read)*(n_total_events//(n_read+1))
