@@ -92,7 +92,7 @@ if __name__ == "__main__":
                 print("Reading evt {} to {}...".format(current_evt, stop_evt-1))
                 #timestamps, ampl, blocks, phases = read_raw_signal(reader, range(current_evt, stop_evt), get_timestamp=True, calibrated = calibrated)
                 #timestamps, ampl, blocks, phases = read_raw_signal_array(reader, range(current_evt, stop_evt), get_timestamp=True, calibrated = calibrated)
-                ampl, timestamps, first_cell_ids, stale_bit = read_calibrated_data(args.infile, DATADIR=DATADIR,
+                ampl, timestamps, first_cell_ids, stale_bit = read_calibrated_data(file_, DATADIR=DATADIR,
                                                                                         event_list=range(current_evt, stop_evt))
 
                 for i in range(current_evt, stop_evt):
