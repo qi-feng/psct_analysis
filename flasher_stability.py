@@ -59,7 +59,8 @@ if __name__ == "__main__":
         print("Reading events in run {}; found {} events in total".format( run_num, n_total_events ))
 
         read_per_cycle = 3000
-        start_evts = range(n_read)*(n_total_events//(n_read+1))
+        start_evts = [ i*(n_total_events//(n_read)) for i in range(n_read)]
+
 
         # ampl_crab5k, blocks_crab5k, phases_crab5k = read_raw_signal(reader_crab, range(5000))
 
