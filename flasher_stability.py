@@ -20,6 +20,7 @@ if __name__ == "__main__":
     parser.add_argument('--outfile', default=None, help="Text file to save parameters to. ")
     parser.add_argument('--outdir', default=None, help="Default to current dir ")
     parser.add_argument('--datadir', default=None, help="Default to dir {}".format(DATADIR))
+    parser.add_argument('--smooth', action="store_true", help="Show/save the smoothed image (using a 3x3 median kernel).")
 
     args = parser.parse_args()
 
