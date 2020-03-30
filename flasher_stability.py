@@ -106,7 +106,7 @@ if __name__ == "__main__":
                 for i in range(current_evt, stop_evt):
                     im = show_image(ampl[i-current_evt], maxZ=4000, show=False)
                     #waveforms.reshape(n_events, n_mods, 4, n_pix_per_mod, n_samples)
-                    integrated_charge = np.sum(ampl, axis=-1) # shape is n_mods, 4, n_pix_per_mod, or 24, 4, 16
+                    integrated_charge = np.sum(ampl[i-current_evt], axis=-1) # shape is n_mods, 4, n_pix_per_mod, or 24, 4, 16
                     im_smooth = medfilt2d(im, 3)
 
                     #if np.percentile(im_smooth[im_smooth != 0], 90) > 500:
