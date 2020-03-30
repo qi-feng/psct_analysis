@@ -67,10 +67,10 @@ if __name__ == "__main__":
 
 
         current_evt = 0
-        this_evt_start = 0
-        this_t_start = 0
-        this_evt_end = 0
-        this_t_end = 0
+        #this_evt_start = 0
+        #this_t_start = 0
+        #this_evt_end = 0
+        #this_t_end = 0
 
         for iread in range(n_read):
 
@@ -117,9 +117,9 @@ if __name__ == "__main__":
                         continue
 
 
-                    if this_evt_start == 0 and this_t_start == 0:
-                        this_evt_start = i
-                        this_t_start = timestamps[i-current_evt]
+                    #if this_evt_start == 0 and this_t_start == 0:
+                    #    this_evt_start = i
+                    #    this_t_start = timestamps[i-current_evt]
 
                     if args.flatfield:
                         im = im / norm_map_default
@@ -183,8 +183,8 @@ if __name__ == "__main__":
                     if n_flasher_read == n_evt_per_read:
                         #finished this cycle
                         read_finished = True
-                        this_evt_end=i
-                        this_t_end=timestamps[i-current_evt]
+                        #this_evt_end=i
+                        #this_t_end=timestamps[i-current_evt]
                         break
 
                 current_evt = stop_evt
@@ -192,7 +192,7 @@ if __name__ == "__main__":
             with open(flasher_file, 'a') as ffio:
                 #ffio.write("run_num,evt_start,evt_stop,t_start,t_stop,monitor_charge,monitor_charge_err\n")
                 ffio.write("{},{},{},{},{},{},{},{},{}\n".format(run_num,np.min(evts),np.max(evts),np.min(ts),np.max(ts),np.mean(meds),np.std(meds),np.mean(medsC),np.std(medsC)))
-                ffio.write("{},{},{},{},{},{},{},{},{}\n".format(run_num,this_evt_start,this_evt_end,this_t_start,this_t_end,np.mean(meds),np.std(meds),np.mean(medsC),np.std(medsC)))
+                #ffio.write("{},{},{},{},{},{},{},{},{}\n".format(run_num,this_evt_start,this_evt_end,this_t_start,this_t_end,np.mean(meds),np.std(meds),np.mean(medsC),np.std(medsC)))
 
     elapsed_time = time.time() - start_time
     print("Elapsed time: {} s".format(elapsed_time))
