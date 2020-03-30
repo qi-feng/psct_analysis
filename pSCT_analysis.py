@@ -143,6 +143,7 @@ def read_calibrated_data(filename, DATADIR=DATADIR,event_list=range(10)):
     timestamps = np.zeros(n_events)  ## data format to be checked
     # Generate the memory to be filled in-place
     if isR1:
+            print("is R1 file")
             waveforms = np.zeros((n_events, n_pixels, n_samples), dtype=np.float32)
             #waveforms = np.zeros((n_events, n_mods, 4, n_pix_per_mod, n_samples), dtype=np.float32)
             #ampl = np.zeros([nEvents, nModules, nasic, nchannel, nSamples])
@@ -156,7 +157,7 @@ def read_calibrated_data(filename, DATADIR=DATADIR,event_list=range(10)):
                                                                                                         event_index])
             # reader.GetR1Events(0,waveforms,first_cell_ids)
     else:
-            waveforms = np.zeros((n_events, n_pixels, n_samples), dtype=np.ushort)  # needed for R0 data
+            waveforms = np.zeros((n_events, n_pixels, n_samples), dtype=np.ushort)  # needed f  or R0 data
             # for event_index in tqdm(range(0,n_events)):
             for event_index, evt_id in enumerate(event_list):
                 # reader.GetR0Event(event_index,waveforms[event_index],first_cell_ids[event_index])

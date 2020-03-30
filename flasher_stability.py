@@ -38,12 +38,12 @@ if __name__ == "__main__":
     else:
         flasher_file = OUTDIR + args.flasher_file
     with open(flasher_file, 'w') as ffio:
-        ffio.write("run_num,evt_start,evt_stop,t_start,t_stop,monitor_charge,monitor_charge_err\n")
+        ffio.write("run_num,evt_start,evt_stop,t_start,t_stop,median_peak,std_peak,monitor_charge,monitor_charge_err\n")
 
-    colnames = ['run_num', 'evt_num', 'timestamp', 'median_charge', 'std_charge']
+    colnames = ['run_num', 'evt_num', 'timestamp', 'median_peak', 'std_peak', 'median_charge', 'std_charge']
     ofile = OUTDIR + "/" + args.outfile
     with open(ofile, 'w') as paramfileio:
-            paramfileio.write(" ".join(colnames))
+            paramfileio.write(",".join(colnames))
             paramfileio.write("\n")
 
     n_evt_per_read = 1800
@@ -65,14 +65,21 @@ if __name__ == "__main__":
 
         # ampl_crab5k, blocks_crab5k, phases_crab5k = read_raw_signal(reader_crab, range(5000))
 
-        evts = []
-        ts = []
-        meds = []
-        stds = []
 
         current_evt = 0
+        this_evt_start = 0
+        this_t_start = 0
+        this_evt_end = 0
+        this_t_end = 0
 
         for iread in range(n_read):
+
+            evts = []
+            ts = []
+            meds = []
+            stds = []
+            medsC = []
+            stdsC = []
 
             current_evt = start_evts[iread]
             n_flasher_read = 0
@@ -98,6 +105,8 @@ if __name__ == "__main__":
 
                 for i in range(current_evt, stop_evt):
                     im = show_image(ampl[i-current_evt], maxZ=4000, show=False)
+                    #waveforms.reshape(n_events, n_mods, 4, n_pix_per_mod, n_samples)
+                    integrated_charge = np.sum(ampl, axis=-1) # shape is n_mods, 4, n_pix_per_mod, or 24, 4, 16
                     im_smooth = medfilt2d(im, 3)
 
                     #if np.percentile(im_smooth[im_smooth != 0], 90) > 500:
@@ -106,6 +115,11 @@ if __name__ == "__main__":
                         #n_flasher_read += 1
                     #else: #not a flasher
                         continue
+
+
+                    if this_evt_start == 0 and this_t_start == 0:
+                        this_evt_start = i
+                        this_t_start = timestamps[i-current_evt]
 
                     if args.flatfield:
                         im = im / norm_map_default
@@ -137,8 +151,11 @@ if __name__ == "__main__":
                         meds.append(np.median(im))
                         stds.append(np.std(im))
 
+                    medsC.append(np.median(integrated_charge))
+                    stdsC.append(np.std(integrated_charge))
+
                     with open(ofile, 'a') as ffio:
-                        ffio.write("{},{},{},{},{}\n".format(run_num,i,timestamps[i-current_evt],meds[-1],stds[-1]))
+                        ffio.write("{},{},{},{},{},{},{}\n".format(run_num,i,timestamps[i-current_evt],meds[-1],stds[-1],medsC[-1],stdsC[-1]))
 
                     if args.save:
                         if args.smooth:
@@ -166,13 +183,16 @@ if __name__ == "__main__":
                     if n_flasher_read == n_evt_per_read:
                         #finished this cycle
                         read_finished = True
+                        this_evt_end=i
+                        this_t_end=timestamps[i-current_evt]
                         break
 
                 current_evt = stop_evt
 
             with open(flasher_file, 'a') as ffio:
                 #ffio.write("run_num,evt_start,evt_stop,t_start,t_stop,monitor_charge,monitor_charge_err\n")
-                ffio.write("{},{},{},{},{},{},{}\n".format(run_num,np.min(evts),np.max(evts),np.min(ts),np.max(ts),np.mean(meds),np.std(meds)))
+                ffio.write("{},{},{},{},{},{},{},{},{}\n".format(run_num,np.min(evts),np.max(evts),np.min(ts),np.max(ts),np.mean(meds),np.std(meds),np.mean(medsC),np.std(medsC)))
+                ffio.write("{},{},{},{},{},{},{},{},{}\n".format(run_num,this_evt_start,this_evt_end,this_t_start,this_t_end,np.mean(meds),np.std(meds),np.mean(medsC),np.std(medsC)))
 
     elapsed_time = time.time() - start_time
     print("Elapsed time: {} s".format(elapsed_time))
