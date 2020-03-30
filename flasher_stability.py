@@ -170,7 +170,7 @@ if __name__ == "__main__":
 
                 current_evt = stop_evt
 
-            with open(flasher_file, 'w') as ffio:
+            with open(flasher_file, 'a') as ffio:
                 #ffio.write("run_num,evt_start,evt_stop,t_start,t_stop,monitor_charge,monitor_charge_err\n")
                 ffio.write("{},{},{},{},{},{},{}\n".format(run_num,np.min(evts),np.max(evts),np.min(ts),np.max(ts),np.mean(meds),np.std(meds)))
 
